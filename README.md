@@ -60,23 +60,6 @@ Instead of writing complex security logic by hand, ForgeGuard empowers developer
 
 ---
 
-## 🚀 Boot Sequence
-
-To deploy ForgeGuard to your local development environment:
-
-```bash
-# 1. Clone the orchestration repository
-git clone https://github.com/DevJay067/forgeguard1.git
-cd forgeguard
-
-# 2. Install core dependencies
-npm install
-
-# 3. Initialize the matrix
-npm run dev
-```
-
-> **Note:** The server will boot at `http://localhost:3000`. Connect your Firebase environment via the setup process to enable autonomous deployments.
 
 ---
 
