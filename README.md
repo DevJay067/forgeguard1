@@ -104,50 +104,6 @@ forgeguard/
 
 ---
 
-## 🚀 Boot Sequence (Local Development)
-
-### 1. Prerequisites
-- **Node.js** v18 or newer.
-- A **Google Cloud Platform (GCP)** account with the **Cloud Firestore API** enabled.
-- An active **Gemini API Key** (or Vertex AI credentials) for the multi-agent system.
-
-### 2. Environment Configuration
-Create a `.env.local` file in the `apps/web` directory and add your required keys:
-```env
-GOOGLE_GENERATIVE_AI_API_KEY="your_api_key_here"
-# Add Firebase Admin SDK credentials if connecting directly to a live project
-FIREBASE_PROJECT_ID="your_project_id"
-```
-
-### 3. Initialization
-Clone the repository and initialize the matrix:
-
-```bash
-# Clone the orchestration repository
-git clone https://github.com/DevJay067/forgeguard1.git
-cd forgeguard
-
-# Install core dependencies across the monorepo
-npm install
-
-# Initialize the development server
-npm run dev
-```
-
-> **Note:** The server will boot at `http://localhost:3000`. 
-
----
-
-## 🤝 Contributing
-
-We welcome contributions from security engineers, frontend developers, and AI researchers. 
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/advanced-auditor`).
-3. Commit your changes.
-4. Push to the branch and open a Pull Request.
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
