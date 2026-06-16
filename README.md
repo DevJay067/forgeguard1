@@ -19,7 +19,7 @@
 
 <br/>
 
-[Overview](#-overview) • [Features](#-core-engine) • [Installation](#-boot-sequence) • [Architecture](#-tech-stack)
+[Overview](#-overview) • [Core Engine](#-core-engine) • [Installation](#-boot-sequence) • [Architecture](#-technical-architecture) • [Project Structure](#-project-structure)
 
 </div>
 
@@ -27,70 +27,130 @@
 
 ## ⚡ Overview
 
-ForgeGuard is an advanced, AI-driven platform designed to entirely automate the generation, auditing, and deployment of Firebase security rules (`firestore.rules`). 
+**ForgeGuard** is an advanced, AI-driven platform designed to entirely automate the generation, auditing, and deployment of Firebase security rules (`firestore.rules`). 
 
-Instead of writing complex security logic by hand, ForgeGuard empowers developers to secure their cloud architectures in seconds through a premium, highly interactive orchestration interface.
+Writing robust security rules manually is often error-prone, tedious, and difficult to test comprehensively. ForgeGuard solves this by providing a premium, highly interactive orchestration interface. Developers can simply describe their cloud architecture (e.g., *"SaaS with team workspaces and admin roles"*), and ForgeGuard's multi-agent AI system will autonomously reason about the data model, generate impenetrable security policies, and rigorously audit them before allowing deployment.
 
 ---
 
-## 🛡️ Core Engine
+## 🛡️ Core Engine & Features
 
 <table>
   <tr>
     <td width="50%">
-      <h3>🧠 AI Orchestration</h3>
-      <p>Describe your app's architecture (e.g., <em>"SaaS with team workspaces and admin roles"</em>) in plain English. ForgeGuard autonomously analyzes the architecture and streams the reasoning process in real-time.</p>
+      <h3>🧠 AI Orchestration Pipeline</h3>
+      <p>Instead of relying on a single LLM prompt, ForgeGuard uses a specialized <b>Multi-Agent System</b>. When you describe your architecture, the engine streams a real-time reasoning trace showing exactly how the AI identifies collections, establishes access vectors, and defines zero-trust boundaries.</p>
     </td>
     <td width="50%">
-      <h3>⚙️ Rule Generation</h3>
-      <p>Automatically outputs precise, structured, and syntax-highlighted <code>firestore.rules</code> blocks. Engineered to handle complex relationships, role-based access control, and strict data validation.</p>
+      <h3>⚙️ Deterministic Rule Generation</h3>
+      <p>The core generator (<code>agent-f</code>) outputs precise, structured, and syntax-highlighted <code>firestore.rules</code> blocks. It is engineered to handle highly complex relationships, role-based access control (RBAC), multi-tenant data isolation, and strict schema validation.</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <h3>🔍 Automated Auditing</h3>
-      <p>Every generated rule set is immediately audited. ForgeGuard calculates a Risk Score out of 100, provides a detailed critique, and verifies that critical security flaws are completely mitigated.</p>
+      <h3>🔍 Autonomous Security Auditing</h3>
+      <p>Every generated rule set is immediately piped into an independent <b>Auditor Agent</b>. The auditor calculates a Risk Score out of 100, provides a detailed vulnerability critique, and specifically hunts for critical security flaws like broad <code>if true;</code> statements or unprotected reads.</p>
     </td>
     <td width="50%">
-      <h3>💬 Security Interface</h3>
-      <p>An integrated, interactive chat UI where you can discuss security requirements, refine specific edge-cases, and continuously dial in your security posture.</p>
+      <h3>💬 Security Chat Interface</h3>
+      <p>An integrated, interactive chat UI where developers can discuss security requirements, refine specific edge-cases, ask for explanations of specific rule blocks, and continuously dial in their security posture via conversational AI.</p>
     </td>
   </tr>
 </table>
 
 ---
 
-## 🚀 Boot Sequence
+## 💻 Technical Architecture
 
-To deploy ForgeGuard to your local development environment:
+ForgeGuard leverages the bleeding edge of modern web development to deliver a zero-latency, highly tactical user experience. 
 
-```bash
-# 1. Clone the orchestration repository
-git clone https://github.com/DevJay067/forgeguard1.git
-cd forgeguard
+### The Multi-Agent System
+The backend orchestration (`src/app/api/orchestrate`) relies on several specialized AI agents powered by `gemini-2.5-pro` and `gemini-2.5-flash`:
+1. **`reasoning.ts`**: Analyzes the user's plain-English prompt and constructs a structural map of the requested database.
+2. **`simulator.ts`**: Generates hypothetical attack vectors and read/write scenarios based on the structure.
+3. **`agent-f.ts`**: The core generator that synthesizes the logic into actual Firebase Security Rules syntax.
+4. **`auditor.ts`**: A separate intelligence that aggressively reviews the generated rules for exploits and assigns a deterministic Risk Score.
+5. **`deploy.ts`**: Packages the final verified rules into an actionable deployment plan.
 
-# 2. Install core dependencies
-npm install
+All data is streamed to the client using **Server-Sent Events (SSE)**, creating a highly engaging, real-time interface.
 
-# 3. Initialize the matrix
-npm run dev
-```
-
-> **Note:** The server will boot at `http://localhost:3000`. Connect your Firebase environment via the setup process to enable autonomous deployments.
+### The UI Matrix
+The frontend utilizes a custom-defined **Monochrome Cyber-Security** theme. The primary interactive element is the `grid-background` component, which implements a high-performance `requestAnimationFrame` loop. It continuously calculates radial distances between thousands of canvas nodes and the user's cursor, applying velocity and friction vectors for an organic, tactile repulsion effect.
 
 ---
 
-## 💻 Technical Architecture
+## 📂 Project Structure
 
-ForgeGuard leverages the bleeding edge of modern web development to deliver a zero-latency, highly tactical user experience:
+This repository is structured as an enterprise-grade Turborepo monorepo:
 
-- **Framework**: `Next.js 15` (App Router)
-- **UI Library**: `React 19`
-- **Styling**: `Tailwind CSS v4`
-- **Component Architecture**: `shadcn/ui`
-- **Package Management**: `Turborepo`
+```text
+forgeguard/
+├── apps/
+│   └── web/                      # Core Next.js 15 Application
+│       ├── src/
+│       │   ├── app/              # App Router (/, /orchestration, /api)
+│       │   ├── components/       # React 19 UI Components
+│       │   │   ├── chat/         # Conversational Security UI
+│       │   │   ├── orchestration/# Multi-Agent Dashboard UI
+│       │   │   └── ui/           # Custom shadcn/ui library
+│       │   └── lib/
+│       │       └── agents/       # AI Agent Definitions (agent-f, auditor, etc.)
+│       ├── public/               # Static assets (including the terminal SVG)
+│       ├── tailwind.config.ts    # Tailwind v4 Configuration
+│       └── package.json
+├── package.json
+└── turbo.json                    # Turborepo Build Configuration
+```
 
-The application uses a custom-defined **Monochrome Cyber-Security** theme. The primary interactive element is the `grid-background`, which implements a `requestAnimationFrame` loop calculating continuous radial distances and applying velocity/friction for an organic, tactile repulsion effect.
+---
+
+## 🚀 Boot Sequence (Local Development)
+
+### 1. Prerequisites
+- **Node.js** v18 or newer.
+- A **Google Cloud Platform (GCP)** account with the **Cloud Firestore API** enabled.
+- An active **Gemini API Key** (or Vertex AI credentials) for the multi-agent system.
+
+### 2. Environment Configuration
+Create a `.env.local` file in the `apps/web` directory and add your required keys:
+```env
+GOOGLE_GENERATIVE_AI_API_KEY="your_api_key_here"
+# Add Firebase Admin SDK credentials if connecting directly to a live project
+FIREBASE_PROJECT_ID="your_project_id"
+```
+
+### 3. Initialization
+Clone the repository and initialize the matrix:
+
+```bash
+# Clone the orchestration repository
+git clone https://github.com/DevJay067/forgeguard1.git
+cd forgeguard
+
+# Install core dependencies across the monorepo
+npm install
+
+# Initialize the development server
+npm run dev
+```
+
+> **Note:** The server will boot at `http://localhost:3000`. 
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions from security engineers, frontend developers, and AI researchers. 
+1. Fork the repository.
+2. Create a feature branch (`git checkout -b feature/advanced-auditor`).
+3. Commit your changes.
+4. Push to the branch and open a Pull Request.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 <br/>
 
