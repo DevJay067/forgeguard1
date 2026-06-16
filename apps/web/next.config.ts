@@ -5,9 +5,7 @@ import path from "path";
 const nextConfig: NextConfig = {
   /* config options here */
   output: "standalone",
-  experimental: {
-    outputFileTracingRoot: path.join(process.cwd(), "../../"),
-  },
+  outputFileTracingRoot: path.join(process.cwd(), "../../"),
 };
 
 export default nextConfig;

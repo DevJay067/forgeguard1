@@ -55,8 +55,8 @@ export class ForgeGuardOrchestrator {
     
     // 1. Requirement Analysis & Architectural Reasoning
     onStep?.("Reasoning", "Performing multi-modal architectural analysis...");
-    const schema = await this.withFallback((a) => a.reason(userPrompt), "reasoning");
-    console.log("[Orchestrator] Schema generated:", schema.entities.map(e => e.name));
+    const schema = await this.withFallback<AppSchema>((a) => a.reason(userPrompt), "reasoning");
+    console.log("[Orchestrator] Schema generated:", schema.entities.map((e: any) => e.name));
     onStep?.("Schema Defined", schema);
 
     let currentRules = "";
