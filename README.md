@@ -11,12 +11,9 @@
 
 <br />
 
-```console
-root@forgeguard:~# ./initialize_system.sh
-[OK] Booting AI Orchestrator...
-[OK] Loading Security Protocol Matrices...
-[OK] Terminal Interface Active.
-```
+<div align="center">
+  <img src="./assets/terminal-animation.svg" alt="Terminal Boot Sequence" width="800" />
+</div>
 
 ## ⚠️ `SYSTEM_OVERVIEW`
 
