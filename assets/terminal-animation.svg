@@ -1,20 +1,46 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 370" width="800" height="370">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 450" width="100%" height="450">
   <defs>
+    <!-- Premium Dark Gradient Background -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#18181b" />
+      <stop offset="100%" stop-color="#09090b" />
+    </linearGradient>
+
+    <!-- Glowing Text Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- High-End Terminal Drop Shadow -->
+    <filter id="shadow" x="-5%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="15" stdDeviation="25" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+    
+    <!-- Top Bar Gradient for depth -->
+    <linearGradient id="bar-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#27272a" />
+      <stop offset="100%" stop-color="#18181b" />
+    </linearGradient>
+
     <style>
-      .bg { fill: #0d1117; stroke: #30363d; stroke-width: 1; rx: 8px; }
-      .text { font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'Liberation Mono', monospace; font-size: 15px; fill: #c9d1d9; font-weight: 500; }
-      .prompt { fill: #7ee787; }
-      .path { fill: #79c0ff; }
-      .cmd { fill: #c9d1d9; font-weight: 600; }
-      .ok { fill: #a5d6ff; font-weight: 600; }
-      .warn { fill: #f2cc60; }
-      .success { fill: #3fb950; font-weight: 600; }
-      .dim { fill: #8b949e; }
+      .window { filter: url(#shadow); }
+      .text { font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Menlo', 'Consolas', monospace; font-size: 15px; fill: #a1a1aa; font-weight: 400; letter-spacing: 0.5px; }
+      .prompt { fill: #f4f4f5; font-weight: 600; }
+      .path { fill: #3b82f6; }
+      .cmd { fill: #f4f4f5; font-weight: 500; }
+      .ok { fill: #10b981; font-weight: 600; }
+      .warn { fill: #f59e0b; font-weight: 600; }
+      .highlight { fill: #38bdf8; font-weight: 600; filter: url(#glow); }
+      .dim { fill: #52525b; }
       
       .line { opacity: 0; animation: showLine 0.1s forwards; }
       
       .cursor {
-        fill: #c9d1d9;
+        fill: #f4f4f5;
         opacity: 0;
         animation: showLine 0.1s forwards, blink 1s step-end infinite;
       }
@@ -28,69 +54,75 @@
       }
     </style>
   </defs>
-  
-  <!-- Terminal Window Background -->
-  <rect class="bg" width="100%" height="100%" />
-  
-  <!-- Mac-style Window Controls -->
-  <circle cx="20" cy="20" r="6" fill="#ff5f56" />
-  <circle cx="40" cy="20" r="6" fill="#ffbd2e" />
-  <circle cx="60" cy="20" r="6" fill="#27c93f" />
-  <line x1="0" y1="40" x2="800" y2="40" stroke="#30363d" stroke-width="1" />
 
-  <!-- Terminal Content -->
-  <g transform="translate(20, 75)">
+  <!-- Outer wrapper with padding for the large drop shadow -->
+  <g transform="translate(50, 40)" class="window">
     
-    <!-- 1. Initialization Command -->
-    <g class="line" style="animation-delay: 0.5s">
-      <text class="text" x="0" y="0">
-        <tspan class="prompt">jay@macbook</tspan><tspan class="dim">:</tspan><tspan class="path">~/forgeguard</tspan><tspan class="dim">$</tspan> <tspan class="cmd">./forgeguard --orchestrate</tspan>
+    <!-- Main Window Rectangle -->
+    <rect width="800" height="360" rx="12" fill="url(#bg-grad)" stroke="#27272a" stroke-width="1.5" />
+    
+    <!-- Title Bar -->
+    <path d="M 0 12 Q 0 0 12 0 L 788 0 Q 800 0 800 12 L 800 40 L 0 40 Z" fill="url(#bar-grad)" />
+    <line x1="0" y1="40" x2="800" y2="40" stroke="#27272a" stroke-width="1.5" />
+    
+    <!-- Realistic Mac Controls -->
+    <circle cx="24" cy="20" r="6" fill="#ff5f56" stroke="#e0443e" stroke-width="1" />
+    <circle cx="44" cy="20" r="6" fill="#ffbd2e" stroke="#dea123" stroke-width="1" />
+    <circle cx="64" cy="20" r="6" fill="#27c93f" stroke="#1aab29" stroke-width="1" />
+
+    <!-- Terminal Title -->
+    <text x="400" y="25" font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif" font-size="13px" fill="#71717a" text-anchor="middle" font-weight="500">forgeguard — orchestration node</text>
+
+    <!-- Terminal Content Area -->
+    <g transform="translate(30, 80)">
+      
+      <g class="line" style="animation-delay: 0.5s">
+        <text class="text" x="0" y="0">
+          <tspan class="prompt">jay@macbook</tspan><tspan class="dim">:</tspan><tspan class="path">~/forgeguard</tspan><tspan class="dim">$</tspan> <tspan class="cmd">./forgeguard --orchestrate</tspan>
+        </text>
+      </g>
+      
+      <text class="text line" style="animation-delay: 1.2s" x="0" y="32">
+        <tspan class="ok">[OK]</tspan> Booting Autonomous Orchestrator Engine...
       </text>
-    </g>
-    
-    <!-- 2. Logs -->
-    <text class="text line" style="animation-delay: 1.2s" x="0" y="30">
-      <tspan class="ok">[INFO]</tspan> Initializing AI Security Orchestrator (v1.0.0)...
-    </text>
-    
-    <text class="text line" style="animation-delay: 1.8s" x="0" y="55">
-      <tspan class="ok">[INFO]</tspan> Connecting to Firebase environment... <tspan class="success">SUCCESS</tspan>
-    </text>
-    
-    <text class="text line" style="animation-delay: 3.0s" x="0" y="80">
-      <tspan class="warn">[WARN]</tspan> Unsecured data models detected in target architecture.
-    </text>
-
-    <text class="text line" style="animation-delay: 4.5s" x="0" y="105">
-      <tspan class="ok">[INFO]</tspan> Streaming LLM analysis over autonomous tunnel...
-    </text>
-
-    <!-- 3. Simulated Code Block Generation -->
-    <text class="text line" style="animation-delay: 5.2s" x="0" y="140">
-      <tspan class="dim">      ></tspan> <tspan class="success">rules_version = '2';</tspan>
-    </text>
-    <text class="text line" style="animation-delay: 5.4s" x="0" y="165">
-      <tspan class="dim">      ></tspan> <tspan class="success">service cloud.firestore {</tspan>
-    </text>
-    <text class="text line" style="animation-delay: 5.6s" x="0" y="190">
-      <tspan class="dim">      ></tspan> <tspan class="success">  match /databases/{database}/documents {</tspan>
-    </text>
-    <text class="text line" style="animation-delay: 6.2s" x="0" y="215">
-      <tspan class="dim">      ></tspan> <tspan class="success">    // Autonomous security constraints generated.</tspan>
-    </text>
-
-    <!-- 4. Final Audit Logs -->
-    <text class="text line" style="animation-delay: 7.5s" x="0" y="255">
-      <tspan class="ok">[INFO]</tspan> Audit passed. Security score: <tspan class="success">100/100</tspan>.
-    </text>
-
-    <!-- 5. Final Prompt & Blinking Cursor -->
-    <g class="line" style="animation-delay: 8.5s">
-      <text class="text" x="0" y="285">
-        <tspan class="prompt">jay@macbook</tspan><tspan class="dim">:</tspan><tspan class="path">~/forgeguard</tspan><tspan class="dim">$</tspan>
+      
+      <text class="text line" style="animation-delay: 1.8s" x="0" y="58">
+        <tspan class="ok">[OK]</tspan> Connecting to Firebase Matrix... <tspan class="highlight">ESTABLISHED</tspan>
       </text>
-      <!-- Blinking Cursor -->
-      <rect class="cursor" style="animation-delay: 8.5s" x="185" y="271" width="8" height="17" />
+      
+      <text class="text line" style="animation-delay: 3.0s" x="0" y="84">
+        <tspan class="warn">[WARN]</tspan> 3 Unsecured logical boundaries detected in architecture.
+      </text>
+
+      <text class="text line" style="animation-delay: 4.5s" x="0" y="110">
+        <tspan class="ok">[OK]</tspan> Streaming dynamic LLM security constraints...
+      </text>
+
+      <!-- Simulated Code Block Generation with Syntax Highlighting -->
+      <text class="text line" style="animation-delay: 5.2s" x="0" y="145">
+        <tspan class="dim">  >_ </tspan> <tspan class="path">rules_version</tspan> <tspan class="text">=</tspan> <tspan class="warn">'2'</tspan><tspan class="text">;</tspan>
+      </text>
+      <text class="text line" style="animation-delay: 5.4s" x="0" y="170">
+        <tspan class="dim">  >_ </tspan> <tspan class="path">service</tspan> <tspan class="text">cloud.firestore {</tspan>
+      </text>
+      <text class="text line" style="animation-delay: 5.6s" x="0" y="195">
+        <tspan class="dim">  >_ </tspan> <tspan class="text">  </tspan><tspan class="path">match</tspan> <tspan class="text">/databases/{database}/documents {</tspan>
+      </text>
+      <text class="text line" style="animation-delay: 6.2s" x="0" y="220">
+        <tspan class="dim">  >_ </tspan> <tspan class="text">    </tspan><tspan class="dim">// Autonomous zero-trust policies applied.</tspan>
+      </text>
+
+      <text class="text line" style="animation-delay: 7.5s" x="0" y="260">
+        <tspan class="ok">[OK]</tspan> Audit passed. Final Risk Score: <tspan class="highlight">100/100</tspan>.
+      </text>
+
+      <!-- Final Prompt & Blinking Cursor -->
+      <g class="line" style="animation-delay: 8.5s">
+        <text class="text" x="0" y="292">
+          <tspan class="prompt">jay@macbook</tspan><tspan class="dim">:</tspan><tspan class="path">~/forgeguard</tspan><tspan class="dim">$</tspan>
+        </text>
+        <rect class="cursor" style="animation-delay: 8.5s" x="185" y="278" width="9" height="17" />
+      </g>
     </g>
   </g>
 </svg>

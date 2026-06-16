@@ -1,103 +1,99 @@
 <div align="center">
 
-# `[ FORGEGUARD ]`
-**`>_ AUTONOMOUS FIREBASE SECURITY ENGINEERING`**
+# `[ F O R G E G U A R D ]`
+<br/>
 
-[![Status](https://img.shields.io/badge/SYS.STATUS-ONLINE-00ff00?style=for-the-badge&color=black&labelColor=111111)]()
-[![Core](https://img.shields.io/badge/KERNEL-NEXT.JS_15-white?style=for-the-badge&color=black&labelColor=111111)]()
-[![Security](https://img.shields.io/badge/SECURITY-MAXIMUM-red?style=for-the-badge&color=black&labelColor=111111)]()
+<img src="./assets/terminal-animation.svg" alt="ForgeGuard Terminal Execution" width="100%" />
+
+<br/>
+
+**Autonomous Firebase Security Engineering.**<br/>
+*A zero-trust policy orchestration engine for modern cloud architectures.*
+
+<br/>
+
+[![Framework](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)]()
+[![Database](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)]()
+[![UI](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)]()
+[![Security](https://img.shields.io/badge/Security-100%2F100-10B981?style=for-the-badge)]()
+
+<br/>
+
+[Overview](#-overview) • [Features](#-core-engine) • [Installation](#-boot-sequence) • [Architecture](#-tech-stack)
 
 </div>
 
-<br />
+---
 
-<div align="center">
-  <img src="./assets/terminal-animation.svg" alt="Terminal Boot Sequence" width="800" />
-</div>
+## ⚡ Overview
 
-## ⚠️ `SYSTEM_OVERVIEW`
+ForgeGuard is an advanced, AI-driven platform designed to entirely automate the generation, auditing, and deployment of Firebase security rules (`firestore.rules`). 
 
-ForgeGuard is an advanced, AI-driven platform designed to automate the generation, auditing, and deployment of Firebase security rules (`firestore.rules`). Built with a state-of-the-art tech stack and a premium, highly interactive terminal-inspired user interface, ForgeGuard empowers developers to secure their cloud architectures in seconds without manually writing complex security logic.
+Instead of writing complex security logic by hand, ForgeGuard empowers developers to secure their cloud architectures in seconds through a premium, highly interactive orchestration interface.
 
 ---
 
-## ⚡ `CORE_MODULES`
+## 🛡️ Core Engine
 
-> **`[01] AI ORCHESTRATION ENGINE`**  
-> Describe your project's architecture (e.g., "SaaS with teams, tasks, file uploads, and admin roles") in plain English. ForgeGuard autonomously analyzes the architecture and streams the generation process in real-time.
-
-> **`[02] RULE_GENERATION_PROTOCOL`**  
-> Automatically outputs precise, structured `firestore.rules` blocks based on your input.
-
-> **`[03] AUTOMATED_AUDIT_SYSTEM`**  
-> Every generated rule set is immediately audited. ForgeGuard calculates a Risk Score out of 100, provides a detailed critique, and verifies that critical security flaws (like `if true`) are absent.
-
-> **`[04] DEPLOYMENT_UPLINK`**  
-> Generates an actionable deployment plan directly in the UI.
-
-> **`[05] SEC_CHAT_INTERFACE`**  
-> An integrated, interactive chat UI where you can discuss security requirements or refine rules interactively.
-
----
-
-## 🛠️ `TECH_STACK_SPECIFICATIONS`
-
-| Layer | Technology | Status |
-| :--- | :--- | :--- |
-| **Framework** | Next.js 15 (App Router) | `ACTIVE` |
-| **UI Library** | React 19 | `ACTIVE` |
-| **Styling** | Tailwind CSS v4 (Hex Variables) | `ACTIVE` |
-| **Components** | shadcn/ui Architecture | `ACTIVE` |
-| **Icons** | Lucide React | `ACTIVE` |
-| **Monorepo** | Turborepo | `ACTIVE` |
+<table>
+  <tr>
+    <td width="50%">
+      <h3>🧠 AI Orchestration</h3>
+      <p>Describe your app's architecture (e.g., <em>"SaaS with team workspaces and admin roles"</em>) in plain English. ForgeGuard autonomously analyzes the architecture and streams the reasoning process in real-time.</p>
+    </td>
+    <td width="50%">
+      <h3>⚙️ Rule Generation</h3>
+      <p>Automatically outputs precise, structured, and syntax-highlighted <code>firestore.rules</code> blocks. Engineered to handle complex relationships, role-based access control, and strict data validation.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🔍 Automated Auditing</h3>
+      <p>Every generated rule set is immediately audited. ForgeGuard calculates a Risk Score out of 100, provides a detailed critique, and verifies that critical security flaws are completely mitigated.</p>
+    </td>
+    <td width="50%">
+      <h3>💬 Security Interface</h3>
+      <p>An integrated, interactive chat UI where you can discuss security requirements, refine specific edge-cases, and continuously dial in your security posture.</p>
+    </td>
+  </tr>
+</table>
 
 ---
 
-## ⚙️ `INITIALIZATION_SEQUENCE`
+## 🚀 Boot Sequence
 
-### `PREREQUISITES`
-Ensure you have Node.js (v18+) installed.
-
-### `BOOT_PROCEDURE`
+To deploy ForgeGuard to your local development environment:
 
 ```bash
-# 1. Clone the repository
+# 1. Clone the orchestration repository
 git clone https://github.com/DevJay067/forgeguard1.git
 cd forgeguard
 
-# 2. Install dependencies
+# 2. Install core dependencies
 npm install
 
-# 3. Initialize development server
+# 3. Initialize the matrix
 npm run dev
 ```
-> Server will boot at `http://localhost:3000`.
+
+> **Note:** The server will boot at `http://localhost:3000`. Connect your Firebase environment via the setup process to enable autonomous deployments.
 
 ---
 
-## 📖 `OPERATIONAL_MANUAL`
+## 💻 Technical Architecture
 
-### `STEP 01: THE MATRIX`
-Navigate to `http://localhost:3000`. You will be greeted by the premium ForgeGuard hero section overlaid on the interactive **Anti-Gravity Matrix**. Move your mouse around to see the custom-built HTML5 Canvas physics engine repel and snap the dot-matrix grid.
+ForgeGuard leverages the bleeding edge of modern web development to deliver a zero-latency, highly tactical user experience:
 
-### `STEP 02: ORCHESTRATION CENTER`
-Click the **Start Orchestrator** button to navigate to the dedicated `/orchestration` dashboard.
-- Type a description of your app's architecture and the data models you need secured.
-- Click **"Generate Security Rules"**. 
-- Watch the Server-Sent Events (SSE) stream trace the AI's internal reasoning and processes in real-time.
-- The right panel will populate with the final, syntax-highlighted `firestore.rules` alongside an automated **Deployment Plan**.
+- **Framework**: `Next.js 15` (App Router)
+- **UI Library**: `React 19`
+- **Styling**: `Tailwind CSS v4`
+- **Component Architecture**: `shadcn/ui`
+- **Package Management**: `Turborepo`
 
----
+The application uses a custom-defined **Monochrome Cyber-Security** theme. The primary interactive element is the `grid-background`, which implements a `requestAnimationFrame` loop calculating continuous radial distances and applying velocity/friction for an organic, tactile repulsion effect.
 
-## 🎨 `DESIGN_AESTHETICS`
-
-The application uses a custom-defined **Monochrome Cyber-Security** theme designed to eliminate generic template styles. 
-- **Typography:** Space Grotesk (Headings) & Inter (Body/Code).
-- **Colors:** Rigidly controlled via CSS variables (Black, White, and Zinc Grays).
-- **Physics Engine:** The primary interactive element is the `grid-background.tsx`, which implements a `requestAnimationFrame` loop to calculate continuous radial distances between thousands of nodes and the user's cursor, applying velocity and friction to create organic repulsion effects.
-
-<br />
+<br/>
 
 <div align="center">
-  <code>END OF FILE.</code>
+  <code>ESTABLISHED // FORGEGUARD SYSTEMS ONLINE</code>
 </div>
