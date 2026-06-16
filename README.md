@@ -65,7 +65,7 @@ Writing robust security rules manually is often error-prone, tedious, and diffic
 ForgeGuard leverages the bleeding edge of modern web development to deliver a zero-latency, highly tactical user experience. 
 
 ### The Multi-Agent System
-The backend orchestration (`src/app/api/orchestrate`) relies on several specialized AI agents powered by `gemini-2.5-pro` and `gemini-2.5-flash`:
+The backend orchestration (`src/app/api/orchestrate`) relies on several specialized AI agents powered by `gemini-2.5-pro` and `gemma-4.31B`:
 1. **`reasoning.ts`**: Analyzes the user's plain-English prompt and constructs a structural map of the requested database.
 2. **`simulator.ts`**: Generates hypothetical attack vectors and read/write scenarios based on the structure.
 3. **`agent-f.ts`**: The core generator that synthesizes the logic into actual Firebase Security Rules syntax.
