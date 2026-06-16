@@ -1,0 +1,12 @@
+/* Webfont: MeshedDisplay-SemiBoldSlanted */@font-face {
+    font-family: 'MeshedDisplaySemBdSlant';
+    src: url('MeshedDisplay-SemiBoldSlanted.eot'); /* IE9 Compat Modes */
+    src: url('MeshedDisplay-SemiBoldSlanted.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+         url('MeshedDisplay-SemiBoldSlanted.woff') format('woff'), /* Modern Browsers */
+         url('MeshedDisplay-SemiBoldSlanted.woff2') format('woff2'), /* Modern Browsers */
+         url('MeshedDisplay-SemiBoldSlanted.ttf') format('truetype'); /* Safari, Android, iOS */
+             font-style: normal;
+    font-weight: normal;
+    text-rendering: optimizeLegibility;
+}
+

@@ -1,0 +1,12 @@
+/* Webfont: MeshedDisplay-ExtraBold */@font-face {
+    font-family: 'MeshedDisplayExtBd';
+    src: url('MeshedDisplay-ExtraBold.eot'); /* IE9 Compat Modes */
+    src: url('MeshedDisplay-ExtraBold.eot?#iefix') format('embedded-opentype'), /* IE6-IE8 */
+         url('MeshedDisplay-ExtraBold.woff') format('woff'), /* Modern Browsers */
+         url('MeshedDisplay-ExtraBold.woff2') format('woff2'), /* Modern Browsers */
+         url('MeshedDisplay-ExtraBold.ttf') format('truetype'); /* Safari, Android, iOS */
+             font-style: normal;
+    font-weight: normal;
+    text-rendering: optimizeLegibility;
+}
+

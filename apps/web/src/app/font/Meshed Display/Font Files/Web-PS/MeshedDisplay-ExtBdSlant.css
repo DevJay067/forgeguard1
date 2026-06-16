@@ -1,0 +1,9 @@
+/* Webfont: MeshedDisplay-ExtBdSlant */@font-face {
+    font-family: 'MeshedDisplayExtBdSlant';
+    src: url('MeshedDisplay-ExtBdSlant.woff2') format('woff2'), /* Modern Browsers */
+         url('MeshedDisplay-ExtBdSlant.otf') format('opentype'); /* Safari, Android, iOS */
+             font-style: normal;
+    font-weight: normal;
+    text-rendering: optimizeLegibility;
+}
+

@@ -1,0 +1,9 @@
+/* Webfont: MeshedDisplay-ExtraBold */@font-face {
+    font-family: 'MeshedDisplayExtBd';
+    src: url('MeshedDisplay-ExtraBold.woff2') format('woff2'), /* Modern Browsers */
+         url('MeshedDisplay-ExtraBold.otf') format('opentype'); /* Safari, Android, iOS */
+             font-style: normal;
+    font-weight: normal;
+    text-rendering: optimizeLegibility;
+}
+

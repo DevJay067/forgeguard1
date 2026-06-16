@@ -1,0 +1,9 @@
+/* Webfont: MeshedDisplay-BoldSlanted */@font-face {
+    font-family: 'MeshedDisplaySlant';
+    src: url('MeshedDisplay-BoldSlanted.woff2') format('woff2'), /* Modern Browsers */
+         url('MeshedDisplay-BoldSlanted.otf') format('opentype'); /* Safari, Android, iOS */
+             font-style: normal;
+    font-weight: bold;
+    text-rendering: optimizeLegibility;
+}
+

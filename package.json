@@ -1,0 +1,22 @@
+{
+  "name": "forgeguard",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "prettier": "latest",
+    "turbo": "latest"
+  },
+  "packageManager": "npm@10.2.4",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1"
+  }
+}
