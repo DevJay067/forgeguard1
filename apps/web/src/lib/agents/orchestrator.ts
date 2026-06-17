@@ -24,8 +24,11 @@ export class ForgeGuardOrchestrator {
     try {
       return await fn(this[agentType]);
     } catch (error: any) {
-      if (error.message?.includes("429") || error.message?.includes("quota")) {
-        console.warn(`[Orchestrator] 429 detected on ${this.currentModel}. Attempting fallback...`);
+      const isQuotaError = error.message?.includes("429") || error.message?.includes("quota");
+      const isOpenRouterError = error.message?.includes("OpenRouter error") || error.message?.includes("Provider returned error");
+      
+      if (isQuotaError || isOpenRouterError) {
+        console.warn(`[Orchestrator] Resilience trigger (${isOpenRouterError ? "OpenRouter" : "Quota"}) on ${this.currentModel}. Attempting fallback...`);
         for (const fallbackModel of FALLBACK_MODELS) {
           if (fallbackModel === this.currentModel) continue;
           

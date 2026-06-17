@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
@@ -38,18 +39,20 @@ export class DeployAgent {
     `;
 
     try {
-      let text: string;
-      if (this.modelName.includes("/")) {
-        text = await callOpenRouter(this.modelName, [
-          { role: "user", content: prompt }
-        ]);
-      } else {
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-      }
-      const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] || "{}";
-      return JSON.parse(jsonStr) as DeploymentPlan;
+      return await withRetry(async () => {
+        let text: string;
+        if (this.modelName.includes("/")) {
+          text = await callOpenRouter(this.modelName, [
+            { role: "user", content: prompt }
+          ]);
+        } else {
+          const result = await this.model.generateContent(prompt);
+          const response = await result.response;
+          text = response.text();
+        }
+        const jsonStr = text.match(/\{[\s\S]*\}/)?.[0] || "{}";
+        return JSON.parse(jsonStr) as DeploymentPlan;
+      });
     } catch (e) {
       console.error("Deployment planning failed:", e);
       return {

@@ -16,7 +16,9 @@ export async function withRetry<T>(
     const isTransient = isQuotaExceeded || 
       error.status === 503 || 
       error.message?.includes("503") || 
-      error.message?.includes("high demand");
+      error.message?.includes("high demand") ||
+      error.message?.includes("Provider returned error") ||
+      error.message?.includes("OpenRouter error");
 
     if (isTransient && retries > 0) {
       // Try to extract retry delay from Google API error if possible

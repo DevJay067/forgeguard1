@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
@@ -27,17 +28,19 @@ export class SimulatorAgent {
     `;
 
     try {
-      let text: string;
-      if (this.modelName.includes("/")) {
-        text = await callOpenRouter(this.modelName, [
-          { role: "user", content: prompt }
-        ]);
-      } else {
-        const result = await this.model.generateContent(prompt);
-        const response = await result.response;
-        text = response.text();
-      }
-      return text.split("\n").filter(line => line.trim().length > 0);
+      return await withRetry(async () => {
+        let text: string;
+        if (this.modelName.includes("/")) {
+          text = await callOpenRouter(this.modelName, [
+            { role: "user", content: prompt }
+          ]);
+        } else {
+          const result = await this.model.generateContent(prompt);
+          const response = await result.response;
+          text = response.text();
+        }
+        return text.split("\n").filter(line => line.trim().length > 0);
+      });
     } catch (e) {
       console.error("Simulation failed:", e);
       return ["Simulation unavailable"];
