@@ -2,14 +2,16 @@ import { ReasoningAgent, AppSchema } from "./reasoning";
 import { AgentF } from "./agent-f";
 import { AuditorAgent, AuditResult } from "./auditor";
 import { SimulatorAgent } from "./simulator";
+import { ValidatorAgent, ValidationResult } from "./validator";
 
-const FALLBACK_MODELS = ["gemini-1.5-flash", "google/gemma-4-31b-it:free", "gemini-2.0-flash"];
+const FALLBACK_MODELS = ["gemini-1.5-flash", "google/gemma-4-26b-a4b-it:free", "gemini-2.0-flash"];
 
 export class ForgeGuardOrchestrator {
   private reasoning: ReasoningAgent;
   private agentF: AgentF;
   private auditor: AuditorAgent;
   private simulator: SimulatorAgent;
+  private validator: ValidatorAgent;
   private currentModel: string;
 
   constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
@@ -18,17 +20,18 @@ export class ForgeGuardOrchestrator {
     this.agentF = new AgentF(modelName, requestOptions);
     this.auditor = new AuditorAgent(modelName, requestOptions);
     this.simulator = new SimulatorAgent(modelName, requestOptions);
+    this.validator = new ValidatorAgent();
   }
 
-  private async withFallback<T>(fn: (agent: any) => Promise<T>, agentType: "reasoning" | "agentF" | "auditor" | "simulator"): Promise<T> {
+  private async withFallback<T>(fn: (agent: any) => Promise<T>, agentType: "reasoning" | "agentF" | "auditor" | "simulator" | "validator"): Promise<T> {
     try {
       return await fn(this[agentType]);
     } catch (error: any) {
-      const isQuotaError = error.message?.includes("429") || error.message?.includes("quota");
+      const shouldFallback = error.message?.includes("429") || error.message?.includes("quota") || error.message?.includes("400") || error.message?.includes("API key");
       const isOpenRouterError = error.message?.includes("OpenRouter error") || error.message?.includes("Provider returned error");
       
-      if (isQuotaError || isOpenRouterError) {
-        console.warn(`[Orchestrator] Resilience trigger (${isOpenRouterError ? "OpenRouter" : "Quota"}) on ${this.currentModel}. Attempting fallback...`);
+      if (shouldFallback || isOpenRouterError) {
+        console.warn(`[Orchestrator] Resilience trigger (${isOpenRouterError ? "OpenRouter" : "Fallback"}) on ${this.currentModel}. Attempting fallback...`);
         for (const fallbackModel of FALLBACK_MODELS) {
           if (fallbackModel === this.currentModel) continue;
           
@@ -41,11 +44,12 @@ export class ForgeGuardOrchestrator {
           this.agentF = new AgentF(fallbackModel, options);
           this.auditor = new AuditorAgent(fallbackModel, options);
           this.simulator = new SimulatorAgent(fallbackModel, options);
+          this.validator = new ValidatorAgent();
           
           try {
             return await fn(this[agentType]);
-          } catch (fallbackError) {
-            console.warn(`[Orchestrator] Fallback to ${fallbackModel} failed, trying next...`);
+          } catch (fallbackError: any) {
+            console.warn(`[Orchestrator] Fallback to ${fallbackModel} failed: ${fallbackError.message}`);
           }
         }
       }
@@ -100,6 +104,19 @@ export class ForgeGuardOrchestrator {
     const attacks = await this.withFallback((a) => a.simulateAttacks(currentRules), "simulator");
     onStep?.("Attacks Simulated", attacks);
 
+    // 5. Emulator Execution
+    onStep?.("Emulator Validation", "Running tests against the Firebase local emulator...");
+    const validationResult = await this.withFallback<ValidationResult>((a) => a.validateRules(currentRules, attacks), "validator");
+    onStep?.("Validation Completed", validationResult);
+
+    if (!validationResult.passed) {
+      console.error("[Orchestrator] Emulator validation failed. The rules blocked legitimate access or allowed malicious queries.");
+      // We could loop here, but for now we just flag it.
+      lastAudit.critique += "\n\nCRITICAL: Emulator validation failed! Real-world tests did not pass.";
+      lastAudit.score = Math.max(lastAudit.score, 60);
+      lastAudit.isSecure = false;
+    }
+
     onStep?.("Finalizing", "Verifying rule integrity and preparing deployment plan...");
     console.log("[Orchestrator] Run completed successfully.");
     return {
@@ -108,6 +125,7 @@ export class ForgeGuardOrchestrator {
       schema,
       iterations,
       simulationResults: attacks,
+      validation: validationResult,
       timestamp: new Date().toISOString()
     };
   }

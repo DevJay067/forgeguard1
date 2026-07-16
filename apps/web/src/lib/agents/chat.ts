@@ -64,11 +64,11 @@ export class ChatAgent {
     try {
       return await withRetry(() => attemptChat(this.modelName, this.model));
     } catch (error: any) {
-      const isQuotaError = error.message?.includes("429") || error.message?.includes("quota");
+      const shouldFallback = error.message?.includes("429") || error.message?.includes("quota") || error.message?.includes("400") || error.message?.includes("API key");
       const isOpenRouterError = error.message?.includes("OpenRouter error") || error.message?.includes("Provider returned error");
 
-      if (isQuotaError || isOpenRouterError) {
-        console.warn(`[ChatAgent] Resilience trigger (${isOpenRouterError ? "OpenRouter" : "Quota"}) on ${this.modelName}. Attempting fallback...`);
+      if (shouldFallback || isOpenRouterError) {
+        console.warn(`[ChatAgent] Resilience trigger (${isOpenRouterError ? "OpenRouter" : "Fallback"}) on ${this.modelName}. Attempting fallback...`);
         for (const fallbackModel of FALLBACK_MODELS) {
           if (fallbackModel === this.modelName) continue;
           console.log(`[ChatAgent] Falling back to ${fallbackModel}...`);
