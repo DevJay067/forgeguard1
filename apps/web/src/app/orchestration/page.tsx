@@ -270,6 +270,7 @@ export default function OrchestrationPage() {
               } else if (event.type === "done") {
                 console.log("[Client] Orchestration complete");
                 setResult(event.result);
+                const rulesContent = event.result?.afterRules || event.result?.rules;
                 if (rulesContent) {
                   setDeployPlan({
                     service: "firestore",
