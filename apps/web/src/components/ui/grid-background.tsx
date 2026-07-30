@@ -65,8 +65,8 @@ const DotMatrixCanvas = ({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: n
 
     const init = () => {
       particles = [];
-      // Increase spacing to reduce total particle count for better performance
-      const spacing = 45; 
+      // Spacing set to 35 for a clean, balanced dot grid density
+      const spacing = 35; 
       for (let x = -spacing; x < width + spacing; x += spacing) {
         for (let y = -spacing; y < height + spacing; y += spacing) {
           particles.push(new Dot(x, y));
