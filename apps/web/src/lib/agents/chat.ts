@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+
 const FALLBACK_MODELS = ["gemini-1.5-flash", "google/gemma-4-26b-a4b-it:free", "gemini-2.0-flash"];
 
 export class ChatAgent {
@@ -18,6 +18,7 @@ export class ChatAgent {
 
   private initModel(name: string, options: any) {
     if (!name.includes("/")) {
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
       this.model = genAI.getGenerativeModel({ 
         model: name,
         generationConfig: { temperature: 0.7 }

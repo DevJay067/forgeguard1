@@ -53,18 +53,18 @@ export function HeroSection({ children }: { children?: React.ReactNode }) {
 				</p>
 
 				<div className="fade-in slide-in-from-bottom-10 flex w-fit animate-in items-center justify-center gap-4 fill-mode-backwards pt-4 delay-300 duration-500 ease-out">
-					<Link href="/docs" passHref>
-						<Button variant="outline" className="rounded-full px-6 py-6 border-white/10 bg-background/50 backdrop-blur-md hover:bg-white/5 transition-all text-sm font-semibold">
-							<TerminalIcon className="size-4 mr-2 text-primary" data-icon="inline-start" />{" "}
-							View Docs
-						</Button>
-					</Link>
-					<Link href="/orchestration" passHref>
-						<Button className="rounded-full px-8 py-6 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all font-semibold shadow-lg text-sm group">
-							Start Orchestrator{" "}
-							<ArrowRightIcon className="size-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" data-icon="inline-end" />
-						</Button>
-					</Link>
+					<Button asChild variant="outline" className="rounded-full px-6 py-6 gap-2 border-border/50 bg-background/50 backdrop-blur-md hover:bg-muted transition-all text-sm font-semibold shadow-sm text-foreground">
+						<Link href="/docs">
+							<TerminalIcon className="size-4 text-primary" />
+							<span>View Docs</span>
+						</Link>
+					</Button>
+					<Button asChild className="rounded-full px-8 py-6 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all font-semibold shadow-lg text-sm group">
+						<Link href="/orchestration">
+							<span>Start Orchestrator</span>
+							<ArrowRightIcon className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
+						</Link>
+					</Button>
 				</div>
 			</div>
 			

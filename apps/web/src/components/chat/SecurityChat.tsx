@@ -81,11 +81,11 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
   };
 
   return (
-    <div className="flex flex-col h-[600px] bg-card/60 backdrop-blur-xl border-2 border-border/50 rounded-[2.5rem] overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-[600px] bg-card/90 backdrop-blur-xl border-2 border-border/60 rounded-[2.5rem] overflow-hidden shadow-2xl">
       {/* Header */}
-      <div className="bg-card/80 backdrop-blur-md p-5 border-b border-border/50 flex items-center justify-between z-10">
+      <div className="bg-background/40 backdrop-blur-sm p-5 border-b border-border/20 flex items-center justify-between z-10 shadow-[8px_8px_16px_rgba(0,0,0,0.05),-8px_-8px_16px_rgba(255,255,255,0.02)]">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary/20 rounded-xl border border-primary/30 flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(255,255,255,0.1)]">
+          <div className="w-10 h-10 bg-primary/10 rounded-2xl border border-primary/20 flex items-center justify-center shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2),inset_-2px_-2px_4px_rgba(255,255,255,0.05)]">
             <ShieldCheck className="w-5 h-5 text-primary" />
           </div>
           <div>
@@ -115,15 +115,15 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2`}>
             <div className={`max-w-[85%] flex gap-3 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-              <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center ${msg.role === "user" ? "bg-background border border-border/50" : "bg-primary/20 border border-primary/30"}`}>
-                {msg.role === "user" ? <User className="w-4 h-4 text-muted-foreground" /> : <Bot className="w-4 h-4 text-primary" />}
+              <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.05)] ${msg.role === "user" ? "bg-primary" : "bg-card border border-border/50"}`}>
+                {msg.role === "user" ? <User className="w-4 h-4 text-primary-foreground" /> : <Bot className="w-4 h-4 text-primary" />}
               </div>
               
               <div className="space-y-2">
-                <div className={`p-4 rounded-2xl text-sm ${
+                <div className={`p-4 text-sm transition-all duration-300 ${
                   msg.role === "user" 
-                    ? "bg-primary text-primary-foreground shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.05)]" 
-                    : "bg-card border border-border/40 text-foreground shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]"
+                    ? "rounded-[1.5rem] rounded-tr-sm bg-primary text-primary-foreground shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.05)]" 
+                    : "rounded-[1.5rem] rounded-tl-sm bg-background/40 backdrop-blur-sm border border-border/20 text-foreground shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]"
                 }`}>
                   {msg.type === "code" ? (
                     <div className="space-y-2">
@@ -131,12 +131,12 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
                         <Code2 className="w-4 h-4" />
                         <span className="text-xs font-bold uppercase">Generated Rules</span>
                       </div>
-                      <pre className="text-xs font-mono bg-background/50 border border-border/50 p-4 rounded-xl overflow-x-auto text-primary whitespace-pre-wrap shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]">
+                      <pre className="text-xs font-mono bg-card rounded-xl p-4 overflow-x-auto text-primary whitespace-pre-wrap shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] border border-transparent">
                         {msg.content}
                       </pre>
                     </div>
                   ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background/50 prose-pre:border prose-pre:border-border/50">
+                    <div className={`prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-background/50 prose-pre:border prose-pre:border-border/50 ${msg.role === 'user' ? 'text-primary-foreground prose-p:text-primary-foreground prose-headings:text-primary-foreground prose-strong:text-primary-foreground' : 'text-foreground dark:text-slate-200 dark:prose-p:text-slate-200 dark:prose-headings:text-slate-100 dark:prose-strong:text-slate-100 dark:prose-li:text-slate-200'}`}>
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                   )}
@@ -174,7 +174,7 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
         ))}
         {isTyping && (
           <div className="flex justify-start animate-pulse">
-            <div className="bg-card border border-border/40 p-4 rounded-2xl flex items-center gap-3 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]">
+            <div className="bg-background/40 backdrop-blur-sm border border-border/20 p-4 rounded-2xl flex items-center gap-3 shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]">
               <Loader2 className="w-4 h-4 animate-spin text-primary" />
               <span className="text-xs text-muted-foreground italic font-medium">Lead is thinking...</span>
             </div>
@@ -184,11 +184,11 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
       </div>
 
       {/* Input */}
-      <div className="p-5 bg-card/80 backdrop-blur-xl border-t border-border/50 z-10">
+      <div className="p-5 bg-card/90 backdrop-blur-xl border-t border-border/60 z-10">
         <div className="relative flex items-center">
           <input
             type="text"
-            className="w-full bg-background/50 border border-border/50 rounded-2xl py-4 pl-5 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]"
+            className="w-full bg-background/40 border border-border/20 rounded-2xl py-4 pl-5 pr-14 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none transition-all shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.02)]"
             placeholder="E.g. SaaS with teams and file ownership..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -197,7 +197,7 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
           <button
             onClick={handleSend}
             disabled={!input.trim() || isTyping}
-            className="absolute right-2 p-3 bg-primary text-primary-foreground rounded-xl transition-all disabled:opacity-50 hover:brightness-110 shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.05)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.2)]"
+            className="absolute right-2 p-3 bg-primary text-primary-foreground rounded-xl transition-all disabled:opacity-50 hover:brightness-110 shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.05)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_4px_rgba(255,255,255,0.05)]"
           >
             <Send className="w-5 h-5" />
           </button>

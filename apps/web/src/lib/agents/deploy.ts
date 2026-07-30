@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+
 
 export interface DeploymentPlan {
   service: string;
@@ -18,6 +18,7 @@ export class DeployAgent {
   constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
     this.modelName = modelName;
     if (!modelName.includes("/")) {
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
       this.model = genAI.getGenerativeModel({ model: modelName }, requestOptions || { apiVersion: "v1" });
     }
   }

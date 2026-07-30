@@ -36,7 +36,8 @@ export class ForgeGuardOrchestrator {
           if (fallbackModel === this.currentModel) continue;
           
           console.log(`[Orchestrator] Falling back to ${fallbackModel}...`);
-          const options = fallbackModel.includes("pro") ? { apiVersion: "v1beta" } : { apiVersion: "v1" };
+          // Use v1beta for all gemini models to ensure compatibility with 1.5-flash and 2.0-flash
+          const options = fallbackModel.includes("gemini") ? { apiVersion: "v1beta" } : { apiVersion: "v1" };
           
           // Re-initialize agents with fallback model
           this.currentModel = fallbackModel;
@@ -73,43 +74,53 @@ export class ForgeGuardOrchestrator {
       isSecure: false,
       vulnerabilities: []
     };
+    let validationResult: ValidationResult | null = null;
+    let attacks: any = null;
     
     let iterations = 0;
     const MAX_ITERATIONS = 5;
 
     // 2. Iterative Generation & Verification Loop
-    while (!lastAudit.isSecure && iterations < MAX_ITERATIONS) {
+    while ((!lastAudit.isSecure || (validationResult !== null && !validationResult.passed)) && iterations < MAX_ITERATIONS) {
       iterations++;
       
-      const feedbackContext = iterations > 1 
+      let feedbackContext = iterations > 1 
         ? `PREVIOUS_AUDIT_FAILURE: Score ${lastAudit.score}. Vulnerabilities: ${JSON.stringify(lastAudit.vulnerabilities)}`
         : "Initial generation based on best practices.";
+        
+      if (iterations > 1 && validationResult && !validationResult.passed) {
+        const failedTests = validationResult.report.filter((r: any) => !r.passed);
+        feedbackContext += `\nEMULATOR_VALIDATION_FAILED: The following tests failed: ${JSON.stringify(failedTests.map((t: any) => ({ test: t.vector, expected: t.expected, actual: t.actual, error: t.error })))}. Fix the rules so these tests pass.`;
+      }
 
-      onStep?.(`Self-Correction (Iter ${iterations})`, iterations > 1 ? `Refining rules based on security risk (${lastAudit.score}/100)...` : "Generating initial security patterns...");
+      onStep?.(`Self-Correction (Iter ${iterations})`, iterations > 1 ? `Refining rules based on security risk (${lastAudit.score}/100) or test failures...` : "Generating initial security patterns...");
       currentRules = await this.withFallback((a) => a.generateRules(schema, feedbackContext), "agentF");
       onStep?.(`Rules Refined (Iter ${iterations})`, currentRules);
       
-      // 3. Security Auditing (Proactive)
-      onStep?.(`Security Audit (Iter ${iterations})`, "Performing deep-scan for zero-day vulnerabilities...");
-      lastAudit = await this.withFallback((a) => a.audit(currentRules), "auditor");
+      // 3. Security Auditing and Simulation (Parallel for speed)
+      onStep?.(`Security Audit & Simulation (Iter ${iterations})`, "Performing deep-scan and generating simulated attacks in parallel...");
+      
+      const auditPromise = this.withFallback<AuditResult>((a) => a.audit(currentRules), "auditor");
+      const simulatorPromise = this.withFallback<any>((a) => a.simulateAttacks(currentRules), "simulator");
+      
+      const [audit, simulatedAttacks] = await Promise.all([auditPromise, simulatorPromise]);
+      lastAudit = audit;
+      attacks = simulatedAttacks;
+      
       onStep?.(`Audit Result (Iter ${iterations})`, lastAudit);
+      onStep?.("Attacks Simulated", attacks);
 
-      if (!lastAudit.isSecure && iterations < MAX_ITERATIONS) {
-        onStep?.(`Loop Correction`, `Security risk detected (${lastAudit.score}). Restarting refinement cycle...`);
+      // 4. Emulator Execution inside the loop
+      onStep?.("Emulator Validation", "Running tests against the Firebase local emulator...");
+      validationResult = await this.withFallback<ValidationResult>((a) => a.validateRules(currentRules, attacks), "validator");
+      onStep?.("Validation Completed", validationResult);
+
+      if ((!lastAudit.isSecure || !validationResult.passed) && iterations < MAX_ITERATIONS) {
+        onStep?.(`Loop Correction`, `Security risk detected (${lastAudit.score}) or validation failed. Restarting refinement cycle...`);
       }
     }
 
-    // 4. Final Verification Layer (Internal Simulation)
-    onStep?.("Attack Simulation", "Running synthetic adversarial queries...");
-    const attacks = await this.withFallback((a) => a.simulateAttacks(currentRules), "simulator");
-    onStep?.("Attacks Simulated", attacks);
-
-    // 5. Emulator Execution
-    onStep?.("Emulator Validation", "Running tests against the Firebase local emulator...");
-    const validationResult = await this.withFallback<ValidationResult>((a) => a.validateRules(currentRules, attacks), "validator");
-    onStep?.("Validation Completed", validationResult);
-
-    if (!validationResult.passed) {
+    if (validationResult && !validationResult.passed) {
       console.error("[Orchestrator] Emulator validation failed. The rules blocked legitimate access or allowed malicious queries.");
       // We could loop here, but for now we just flag it.
       lastAudit.critique += "\n\nCRITICAL: Emulator validation failed! Real-world tests did not pass.";
@@ -126,6 +137,117 @@ export class ForgeGuardOrchestrator {
       iterations,
       simulationResults: attacks,
       validation: validationResult,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Improve existing rules: audit → improve → re-audit → compare
+   */
+  async runImprove(existingRules: string, userPrompt: string, onStep?: (step: string, data: any) => void) {
+    console.log(`[Orchestrator] Starting IMPROVE run for existing rules`);
+
+    // 1. Audit existing rules (BEFORE score)
+    onStep?.("Auditing Existing Rules", "Analyzing your current Firestore security rules...");
+    const beforeAudit = await this.withFallback<AuditResult>((a) => a.audit(existingRules), "auditor");
+    onStep?.("Before Audit Complete", beforeAudit);
+    console.log(`[Orchestrator] Before audit score: ${beforeAudit.score}/100`);
+
+    // 2. Reason about the app schema from the prompt (or infer from existing rules)
+    onStep?.("Reasoning", "Inferring application architecture from your rules and prompt...");
+    const contextPrompt = userPrompt.trim() 
+      ? userPrompt 
+      : `Analyze these existing Firebase security rules and infer the application architecture:\n${existingRules}`;
+    const schema = await this.withFallback<AppSchema>((a) => a.reason(contextPrompt), "reasoning");
+    onStep?.("Schema Inferred", schema);
+
+    // 3. Iterative improvement loop
+    let currentRules = existingRules;
+    let lastAudit = beforeAudit;
+    let improvements: string[] = [];
+    let validationResult: ValidationResult | null = null;
+    let attacks: any = null;
+    let iterations = 0;
+    const MAX_ITERATIONS = 5;
+
+    while ((!lastAudit.isSecure || (validationResult !== null && !validationResult.passed)) && iterations < MAX_ITERATIONS) {
+      iterations++;
+
+      let feedbackContext = iterations > 1
+        ? `PREVIOUS_IMPROVEMENT_ATTEMPT: Score ${lastAudit.score}. Remaining vulnerabilities: ${JSON.stringify(lastAudit.vulnerabilities)}`
+        : "Initial improvement based on audit findings.";
+
+      if (iterations > 1 && validationResult && !validationResult.passed) {
+        const failedTests = validationResult.report.filter((r: any) => !r.passed);
+        feedbackContext += `\nEMULATOR_VALIDATION_FAILED: Fix these test failures: ${JSON.stringify(failedTests.map((t: any) => ({ test: t.vector, expected: t.expected, actual: t.actual })))}`;
+      }
+
+      onStep?.(`Improving Rules (Iter ${iterations})`, iterations > 1 ? `Refining improvements based on remaining issues (${lastAudit.score}/100)...` : "Generating security improvements based on audit findings...");
+
+      const improvementResult = await this.withFallback<{ rules: string; improvements: string[] }>(
+        (a) => a.improveRules(currentRules, lastAudit, schema, feedbackContext),
+        "agentF"
+      );
+      currentRules = improvementResult.rules;
+      improvements = [...improvements, ...improvementResult.improvements];
+
+      onStep?.(`Rules Improved (Iter ${iterations})`, { rules: currentRules, improvements: improvementResult.improvements });
+
+      // 4. Re-audit improved rules + simulate attacks (parallel)
+      onStep?.(`Re-Auditing & Simulating (Iter ${iterations})`, "Verifying improvements and running attack simulations...");
+
+      const auditPromise = this.withFallback<AuditResult>((a) => a.audit(currentRules), "auditor");
+      const simulatorPromise = this.withFallback<any>((a) => a.simulateAttacks(currentRules), "simulator");
+
+      const [audit, simulatedAttacks] = await Promise.all([auditPromise, simulatorPromise]);
+      lastAudit = audit;
+      attacks = simulatedAttacks;
+
+      onStep?.(`After Audit (Iter ${iterations})`, lastAudit);
+      onStep?.("Attacks Simulated", attacks);
+
+      // 5. Validate in emulator
+      onStep?.("Emulator Validation", "Running tests against the Firebase local emulator...");
+      validationResult = await this.withFallback<ValidationResult>((a) => a.validateRules(currentRules, attacks), "validator");
+      onStep?.("Validation Completed", validationResult);
+
+      if ((!lastAudit.isSecure || !validationResult.passed) && iterations < MAX_ITERATIONS) {
+        onStep?.("Loop Correction", `Further improvements needed (score: ${lastAudit.score}). Restarting refinement cycle...`);
+      }
+    }
+
+    if (validationResult && !validationResult.passed) {
+      lastAudit.critique += "\n\nCRITICAL: Emulator validation failed on some tests.";
+      lastAudit.score = Math.max(lastAudit.score, 60);
+      lastAudit.isSecure = false;
+    }
+
+    // Calculate improvement metrics
+    const scoreImprovement = beforeAudit.score - lastAudit.score;
+    const vulnerabilitiesFixed = beforeAudit.vulnerabilities.length - lastAudit.vulnerabilities.length;
+
+    onStep?.("Improvement Complete", {
+      beforeScore: beforeAudit.score,
+      afterScore: lastAudit.score,
+      scoreImprovement,
+      vulnerabilitiesFixed,
+      totalImprovements: improvements.length
+    });
+
+    console.log(`[Orchestrator] Improve run completed. Score: ${beforeAudit.score} → ${lastAudit.score}`);
+
+    return {
+      beforeRules: existingRules,
+      afterRules: currentRules,
+      beforeAudit,
+      afterAudit: lastAudit,
+      improvements,
+      schema,
+      iterations,
+      simulationResults: attacks,
+      validation: validationResult,
+      scoreImprovement,
+      vulnerabilitiesFixed,
       timestamp: new Date().toISOString()
     };
   }

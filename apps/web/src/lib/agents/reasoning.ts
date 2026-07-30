@@ -2,7 +2,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/ge
 import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+
 
 export interface AppSchema {
   entities: {
@@ -22,6 +22,7 @@ export class ReasoningAgent {
   constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
     this.modelName = modelName;
     if (!modelName.includes("/")) {
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
       this.model = genAI.getGenerativeModel({ 
         model: modelName,
         generationConfig: {
@@ -69,8 +70,40 @@ export class ReasoningAgent {
         }
         
         // Robust JSON extraction
-        text = text.replace(/```json\n?|```/g, "").trim();
-        return JSON.parse(text) as AppSchema;
+        let jsonStr = text;
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/i);
+        if (jsonMatch) {
+          jsonStr = jsonMatch[1];
+        } else {
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonStr = text.substring(firstBrace, lastBrace + 1);
+          }
+        }
+
+        // Clean up common JSON issues from LLMs
+        jsonStr = jsonStr.trim()
+          .replace(/^[^{]*/, "")
+          .replace(/[^}]*$/, "");
+
+        try {
+          return JSON.parse(jsonStr) as AppSchema;
+        } catch (parseError: any) {
+          console.warn("[ReasoningAgent] JSON parse failed, attempting aggressive cleanup:", parseError.message);
+          
+          const cleanedJson = jsonStr
+            .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
+            .replace(/\\'/g, "'")
+            .replace(/\\(?!"|\\|\/|b|f|n|r|t|u)/g, "\\\\");
+
+          try {
+            return JSON.parse(cleanedJson) as AppSchema;
+          } catch (secondError: any) {
+            console.error("[ReasoningAgent] Final JSON parse failed:", secondError.message);
+            throw new Error(`Failed to parse architectural schema: ${secondError.message}`);
+          }
+        }
       });
     } catch (error: any) {
       console.error("[ReasoningAgent] Failed:", error);

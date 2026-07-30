@@ -65,8 +65,8 @@ const DotMatrixCanvas = ({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: n
 
     const init = () => {
       particles = [];
-      const spacing = 30;
-      // Overshoot dimensions slightly to cover edges smoothly
+      // Increase spacing to reduce total particle count for better performance
+      const spacing = 45; 
       for (let x = -spacing; x < width + spacing; x += spacing) {
         for (let y = -spacing; y < height + spacing; y += spacing) {
           particles.push(new Dot(x, y));
@@ -85,7 +85,28 @@ const DotMatrixCanvas = ({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: n
     window.addEventListener("resize", handleResize);
     handleResize(); // Initial setup
 
-    const animate = () => {
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    let lastTime = 0;
+    const fps = 30; // Throttle to 30fps for background elements
+    const interval = 1000 / fps;
+
+    const animate = (time: number) => {
+      if (prefersReducedMotion) {
+        // Just draw once and don't loop
+        ctx.clearRect(0, 0, width, height);
+        for (let i = 0; i < particles.length; i++) {
+          particles[i].draw(ctx);
+        }
+        return;
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+
+      const deltaTime = time - lastTime;
+      if (deltaTime < interval) return;
+      lastTime = time - (deltaTime % interval);
+
       ctx.clearRect(0, 0, width, height);
       
       const mx = mouseRef.current.x;
@@ -95,11 +116,9 @@ const DotMatrixCanvas = ({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: n
         particles[i].update(mx, my);
         particles[i].draw(ctx);
       }
-      
-      animationFrameId = requestAnimationFrame(animate);
     };
     
-    animate();
+    animationFrameId = requestAnimationFrame(animate);
 
     return () => {
       window.removeEventListener("resize", handleResize);
