@@ -117,7 +117,7 @@ export class AgentF {
       
       AUDIT FINDINGS (vulnerabilities to fix):
       ${JSON.stringify(auditFindings.vulnerabilities, null, 2)}
-      Audit Score: ${auditFindings.score}/100 (lower is better)
+      Audit Score: ${auditFindings.score}/100 (higher is better, 90-100 is secure)
       Audit Critique: ${auditFindings.critique}
       
       INFERRED SCHEMA: ${JSON.stringify(schema)}

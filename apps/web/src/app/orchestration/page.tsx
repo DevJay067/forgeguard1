@@ -33,6 +33,60 @@ function ExpandableStepContent({ content }: { content: any }) {
   );
 }
 
+const DEFAULT_FIRESTORE_RULES = `rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Describe your requirements on the left, then click Generate.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}`;
+
+interface DiffLine {
+  type: 'added' | 'removed' | 'unchanged';
+  text: string;
+}
+
+function computeDiff(oldStr: string, newStr: string): DiffLine[] {
+  if (!oldStr) return newStr.split('\n').map(line => ({ type: 'added' as const, text: line }));
+  if (!newStr) return oldStr.split('\n').map(line => ({ type: 'removed' as const, text: line }));
+  
+  const oldLines = oldStr.split('\n');
+  const newLines = newStr.split('\n');
+  
+  const dp: number[][] = Array(oldLines.length + 1).fill(null).map(() => Array(newLines.length + 1).fill(0));
+  
+  for (let i = 1; i <= oldLines.length; i++) {
+    for (let j = 1; j <= newLines.length; j++) {
+      if (oldLines[i - 1] === newLines[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+  
+  const diff: DiffLine[] = [];
+  let i = oldLines.length;
+  let j = newLines.length;
+  
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+      diff.unshift({ type: 'unchanged', text: oldLines[i - 1] });
+      i--;
+      j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      diff.unshift({ type: 'added', text: newLines[j - 1] });
+      j--;
+    } else {
+      diff.unshift({ type: 'removed', text: oldLines[i - 1] });
+      i--;
+    }
+  }
+  return diff;
+}
+
 export default function OrchestrationPage() {
   const [viewMode, setViewMode] = useState<"dashboard" | "chat" | "profile" | "settings">("dashboard");
   const [prompt, setPrompt] = useState("");
@@ -63,6 +117,9 @@ export default function OrchestrationPage() {
 
   // ── NEW STATE: View Toggle for rules ──
   const [rulesView, setRulesView] = useState<"after" | "before">("after");
+
+  // ── NEW STATE: Streaming Rules & Diffing ──
+  const [streamingRules, setStreamingRules] = useState("");
   
   const router = useRouter();
   const endOfStepsRef = useRef<HTMLDivElement>(null);
@@ -215,6 +272,7 @@ export default function OrchestrationPage() {
     console.log(`[Client] Starting ${orchestrationMode} orchestration`);
     setLoading(true);
     setResult(null);
+    setStreamingRules("");
     setSteps([{ title: "Initialization", content: `Connecting to ForgeGuard Orchestrator (${orchestrationMode} mode)...` }]);
     setSteps([{ title: "Initialization", content: `Connecting to ForgeGuard Orchestrator (${orchestrationMode} mode)...` }]);
 
@@ -267,6 +325,13 @@ export default function OrchestrationPage() {
               
               if (event.type === "step") {
                 setSteps((s) => [...s, { title: event.step, content: event.data }]);
+                
+                // Live capture streaming rules to show live corrections in the editor
+                if (event.step.startsWith("Rules Refined")) {
+                  setStreamingRules(event.data);
+                } else if (event.step.startsWith("Rules Improved")) {
+                  setStreamingRules(event.data.rules);
+                }
               } else if (event.type === "done") {
                 console.log("[Client] Orchestration complete");
                 setResult(event.result);
@@ -307,10 +372,13 @@ export default function OrchestrationPage() {
   const afterScore = result?.afterAudit?.score ?? result?.audit?.score;
   const isImproveResult = result?.mode === "improve";
   const improvements = result?.improvements || [];
+  
+  const currentActiveRules = result?.afterRules || result?.rules || streamingRules;
   const displayRules = rulesView === "before" && result?.beforeRules 
     ? result.beforeRules 
-    : (result?.afterRules || result?.rules);
-  const canDeploy = result && (afterScore !== undefined && afterScore <= 20);
+    : (currentActiveRules || (orchestrationMode === "improve" ? existingRules : DEFAULT_FIRESTORE_RULES));
+  const canDeploy = result && (afterScore !== undefined && afterScore >= 90);
+  const showDiff = orchestrationMode === "improve" && existingRules && currentActiveRules && rulesView === "after";
 
   return (
     <GridBackground variant="dots" className="flex w-full flex-col font-sans selection:bg-primary/30 min-h-screen">
@@ -738,8 +806,32 @@ export default function OrchestrationPage() {
                     <div className="w-3.5 h-3.5 rounded-full bg-green-500/80 shadow-inner"></div>
                   </div>
                 </div>
-                <pre className="flex-1 p-6 text-sm overflow-auto text-primary font-mono custom-scrollbar bg-card rounded-3xl shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] border border-transparent">
-                  {displayRules || "// The generated rules will appear here..."}
+                <pre className="flex-1 p-6 text-xs overflow-auto text-primary font-mono custom-scrollbar bg-card rounded-3xl shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] border border-transparent">
+                  {showDiff ? (
+                    <div className="flex flex-col min-w-max">
+                      {computeDiff(existingRules, currentActiveRules).map((line, idx) => {
+                        let bgColor = "transparent";
+                        let textColor = "text-muted-foreground";
+                        let prefix = "  ";
+                        if (line.type === "added") {
+                          bgColor = "bg-emerald-500/10 border-l-2 border-emerald-500 px-1";
+                          textColor = "text-emerald-400 font-bold";
+                          prefix = "+ ";
+                        } else if (line.type === "removed") {
+                          bgColor = "bg-destructive/10 border-l-2 border-destructive px-1";
+                          textColor = "text-destructive/80 font-bold line-through";
+                          prefix = "- ";
+                        }
+                        return (
+                          <div key={idx} className={`py-0.5 ${bgColor} ${textColor} whitespace-pre`}>
+                            {prefix}{line.text}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    displayRules || "// The generated rules will appear here..."
+                  )}
                 </pre>
               </div>
 
@@ -757,7 +849,7 @@ export default function OrchestrationPage() {
                         {/* Before Score */}
                         <div className="text-center flex-1">
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Before</p>
-                          <p className={`text-3xl font-extrabold ${beforeScore <= 10 ? 'text-chart-2' : beforeScore <= 30 ? 'text-yellow-500' : 'text-destructive'}`}>
+                          <p className={`text-3xl font-extrabold ${beforeScore >= 90 ? 'text-chart-2' : beforeScore >= 70 ? 'text-yellow-500' : 'text-destructive'}`}>
                             {beforeScore}
                           </p>
                           <p className="text-[10px] text-muted-foreground">/100</p>
@@ -768,7 +860,7 @@ export default function OrchestrationPage() {
                         {/* After Score */}
                         <div className="text-center flex-1">
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">After</p>
-                          <p className={`text-3xl font-extrabold ${afterScore <= 10 ? 'text-chart-2' : afterScore <= 30 ? 'text-yellow-500' : 'text-destructive'}`}>
+                          <p className={`text-3xl font-extrabold ${afterScore >= 90 ? 'text-chart-2' : afterScore >= 70 ? 'text-yellow-500' : 'text-destructive'}`}>
                             {afterScore}
                           </p>
                           <p className="text-[10px] text-muted-foreground">/100</p>
@@ -778,13 +870,13 @@ export default function OrchestrationPage() {
                       {/* Improvement badge */}
                       {result.scoreImprovement > 0 && (
                         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2 flex items-center justify-center gap-2 text-emerald-400 text-xs font-bold">
-                          <TrendingDown className="w-3.5 h-3.5" />
-                          ↓ {Math.round((result.scoreImprovement / beforeScore) * 100)}% risk reduction
+                          <Rocket className="w-3.5 h-3.5" />
+                          ↑ +{result.scoreImprovement} points security improvement
                           <span className="text-muted-foreground font-normal">({result.vulnerabilitiesFixed} vulns fixed)</span>
                         </div>
                       )}
                       
-                      {afterScore <= 10 && (
+                      {afterScore >= 90 && (
                         <div className="bg-chart-2/10 border border-chart-2/20 rounded-lg p-2 flex items-center gap-2 text-chart-2 text-xs font-medium mt-2">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Production Ready
                         </div>
@@ -797,8 +889,8 @@ export default function OrchestrationPage() {
                       </h2>
                       <div className="space-y-3">
                         <div className="flex justify-between items-baseline border-b border-border pb-2">
-                          <span className="text-xs text-muted-foreground uppercase tracking-wider">Risk Score</span>
-                          <span className={`text-2xl font-bold ${result.audit.score <= 10 ? 'text-chart-2' : 'text-destructive'}`}>
+                          <span className="text-xs text-muted-foreground uppercase tracking-wider">Security Score</span>
+                          <span className={`text-2xl font-bold ${result.audit.score >= 90 ? 'text-chart-2' : 'text-destructive'}`}>
                             {result.audit.score}/100
                           </span>
                         </div>
@@ -870,9 +962,9 @@ export default function OrchestrationPage() {
                             </div>
                           </div>
                           
-                          {afterScore !== undefined && afterScore > 20 && (
+                          {afterScore !== undefined && afterScore < 90 && (
                             <p className="text-[10px] text-destructive/80 mt-2 flex items-center gap-1">
-                              <AlertTriangle className="w-3 h-3" /> Score too high ({afterScore}/100). Consider improving further before deploying to production.
+                              <AlertTriangle className="w-3 h-3" /> Score too low ({afterScore}/100). Consider improving further before deploying to production.
                             </p>
                           )}
                         </div>

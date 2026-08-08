@@ -71,10 +71,10 @@ export class AuditorAgent {
       - Is the 'rules_version' explicitly '2'?
 
       SCORING (Be strict):
-      - 0-10: Production-Ready (No flaws)
-      - 11-30: Minor (Missing validation but ownership is secure)
-      - 31-60: Risky (Broad access for authenticated users)
-      - 61-100: CRITICAL (Unauthorized data access or broad wildcards)
+      - 90-100: Production-Ready (No flaws)
+      - 70-89: Minor Issues (Missing data validation but ownership is secure)
+      - 40-69: Risky (Broad read/write access for authenticated users)
+      - 0-39: CRITICAL (Unauthorized data access or broad recursive wildcards)
 
       Output format: JSON with score, critique, isSecure, vulnerabilities[{severity, path, description, recommendation}].
     `;
@@ -102,7 +102,7 @@ export class AuditorAgent {
 
         try {
           const audit = JSON.parse(jsonStr) as AuditResult;
-          audit.isSecure = audit.score <= 10;
+          audit.isSecure = audit.score >= 90;
           return audit;
         } catch (parseError: any) {
           console.warn("[AuditorAgent] JSON parse failed, attempting aggressive cleanup:", parseError.message);
@@ -115,7 +115,7 @@ export class AuditorAgent {
 
           try {
             const audit = JSON.parse(cleanedJson) as AuditResult;
-            audit.isSecure = audit.score <= 10;
+            audit.isSecure = audit.score >= 90;
             return audit;
           } catch (secondError: any) {
             console.error("[AuditorAgent] Final JSON parse failed:", secondError.message);

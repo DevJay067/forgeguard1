@@ -143,10 +143,10 @@ export function SecurityChat({ orchestrationContext, userPlan = "Free" }: Securi
                 </div>
 
                 {msg.type === "audit" && msg.data && (
-                  <div className={`p-5 rounded-2xl border ${msg.data.score <= 10 ? 'bg-chart-2/10 border-chart-2/20' : 'bg-destructive/10 border-destructive/20'} animate-in zoom-in-95 shadow-[4px_4px_8px_rgba(0,0,0,0.15),-4px_-4px_8px_rgba(255,255,255,0.02)]`}>
+                  <div className={`p-5 rounded-2xl border ${msg.data.score >= 90 ? 'bg-chart-2/10 border-chart-2/20' : 'bg-destructive/10 border-destructive/20'} animate-in zoom-in-95 shadow-[4px_4px_8px_rgba(0,0,0,0.15),-4px_-4px_8px_rgba(255,255,255,0.02)]`}>
                     <div className="flex items-center gap-2 mb-2">
-                      {msg.data.score <= 10 ? <ShieldCheck className="w-4 h-4 text-chart-2" /> : <AlertTriangle className="w-4 h-4 text-destructive" />}
-                      <span className={`text-xs font-bold uppercase tracking-wider ${msg.data.score <= 10 ? 'text-chart-2' : 'text-destructive'}`}>
+                      {msg.data.score >= 90 ? <ShieldCheck className="w-4 h-4 text-chart-2" /> : <AlertTriangle className="w-4 h-4 text-destructive" />}
+                      <span className={`text-xs font-bold uppercase tracking-wider ${msg.data.score >= 90 ? 'text-chart-2' : 'text-destructive'}`}>
                         Audit Report: {msg.data.score}/100
                       </span>
                     </div>

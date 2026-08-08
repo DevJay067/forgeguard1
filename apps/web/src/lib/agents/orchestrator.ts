@@ -69,7 +69,7 @@ export class ForgeGuardOrchestrator {
 
     let currentRules = "";
     let lastAudit: AuditResult = { 
-      score: 100, 
+      score: 0, 
       critique: "Awaiting generation", 
       isSecure: false,
       vulnerabilities: []
@@ -93,21 +93,19 @@ export class ForgeGuardOrchestrator {
         feedbackContext += `\nEMULATOR_VALIDATION_FAILED: The following tests failed: ${JSON.stringify(failedTests.map((t: any) => ({ test: t.vector, expected: t.expected, actual: t.actual, error: t.error })))}. Fix the rules so these tests pass.`;
       }
 
-      onStep?.(`Self-Correction (Iter ${iterations})`, iterations > 1 ? `Refining rules based on security risk (${lastAudit.score}/100) or test failures...` : "Generating initial security patterns...");
+      onStep?.(`Self-Correction (Iter ${iterations})`, iterations > 1 ? `Refining rules based on security score (${lastAudit.score}/100) or test failures...` : "Generating initial security patterns...");
       currentRules = await this.withFallback((a) => a.generateRules(schema, feedbackContext), "agentF");
       onStep?.(`Rules Refined (Iter ${iterations})`, currentRules);
       
-      // 3. Security Auditing and Simulation (Parallel for speed)
-      onStep?.(`Security Audit & Simulation (Iter ${iterations})`, "Performing deep-scan and generating simulated attacks in parallel...");
+      // 3. Security Auditing and Simulation (Sequential to avoid fallback race conditions)
+      onStep?.(`Security Audit & Simulation (Iter ${iterations})`, "Performing deep-scan and generating simulated attacks...");
       
-      const auditPromise = this.withFallback<AuditResult>((a) => a.audit(currentRules), "auditor");
-      const simulatorPromise = this.withFallback<any>((a) => a.simulateAttacks(currentRules), "simulator");
-      
-      const [audit, simulatedAttacks] = await Promise.all([auditPromise, simulatorPromise]);
+      const audit = await this.withFallback<AuditResult>((a) => a.audit(currentRules), "auditor");
       lastAudit = audit;
-      attacks = simulatedAttacks;
-      
       onStep?.(`Audit Result (Iter ${iterations})`, lastAudit);
+
+      const simulatedAttacks = await this.withFallback<any>((a) => a.simulateAttacks(currentRules), "simulator");
+      attacks = simulatedAttacks;
       onStep?.("Attacks Simulated", attacks);
 
       // 4. Emulator Execution inside the loop
@@ -116,7 +114,7 @@ export class ForgeGuardOrchestrator {
       onStep?.("Validation Completed", validationResult);
 
       if ((!lastAudit.isSecure || !validationResult.passed) && iterations < MAX_ITERATIONS) {
-        onStep?.(`Loop Correction`, `Security risk detected (${lastAudit.score}) or validation failed. Restarting refinement cycle...`);
+        onStep?.(`Loop Correction`, `Security issues detected (score: ${lastAudit.score}/100) or validation failed. Restarting refinement cycle...`);
       }
     }
 
@@ -124,7 +122,7 @@ export class ForgeGuardOrchestrator {
       console.error("[Orchestrator] Emulator validation failed. The rules blocked legitimate access or allowed malicious queries.");
       // We could loop here, but for now we just flag it.
       lastAudit.critique += "\n\nCRITICAL: Emulator validation failed! Real-world tests did not pass.";
-      lastAudit.score = Math.max(lastAudit.score, 60);
+      lastAudit.score = Math.min(lastAudit.score, 40);
       lastAudit.isSecure = false;
     }
 
@@ -193,17 +191,15 @@ export class ForgeGuardOrchestrator {
 
       onStep?.(`Rules Improved (Iter ${iterations})`, { rules: currentRules, improvements: improvementResult.improvements });
 
-      // 4. Re-audit improved rules + simulate attacks (parallel)
+      // 4. Re-audit improved rules + simulate attacks (Sequential to avoid fallback race conditions)
       onStep?.(`Re-Auditing & Simulating (Iter ${iterations})`, "Verifying improvements and running attack simulations...");
 
-      const auditPromise = this.withFallback<AuditResult>((a) => a.audit(currentRules), "auditor");
-      const simulatorPromise = this.withFallback<any>((a) => a.simulateAttacks(currentRules), "simulator");
-
-      const [audit, simulatedAttacks] = await Promise.all([auditPromise, simulatorPromise]);
+      const audit = await this.withFallback<AuditResult>((a) => a.audit(currentRules), "auditor");
       lastAudit = audit;
-      attacks = simulatedAttacks;
-
       onStep?.(`After Audit (Iter ${iterations})`, lastAudit);
+
+      const simulatedAttacks = await this.withFallback<any>((a) => a.simulateAttacks(currentRules), "simulator");
+      attacks = simulatedAttacks;
       onStep?.("Attacks Simulated", attacks);
 
       // 5. Validate in emulator
@@ -218,12 +214,12 @@ export class ForgeGuardOrchestrator {
 
     if (validationResult && !validationResult.passed) {
       lastAudit.critique += "\n\nCRITICAL: Emulator validation failed on some tests.";
-      lastAudit.score = Math.max(lastAudit.score, 60);
+      lastAudit.score = Math.min(lastAudit.score, 40);
       lastAudit.isSecure = false;
     }
 
     // Calculate improvement metrics
-    const scoreImprovement = beforeAudit.score - lastAudit.score;
+    const scoreImprovement = lastAudit.score - beforeAudit.score;
     const vulnerabilitiesFixed = beforeAudit.vulnerabilities.length - lastAudit.vulnerabilities.length;
 
     onStep?.("Improvement Complete", {
