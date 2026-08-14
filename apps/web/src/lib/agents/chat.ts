@@ -3,16 +3,16 @@ import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
 
-const FALLBACK_MODELS = ["gemini-1.5-flash", "google/gemma-4-26b-a4b-it:free", "gemini-2.0-flash"];
+const FALLBACK_MODELS = ["google/gemma-4-26b-a4b-it:free", "gemini-2.5-flash"];
 
 export class ChatAgent {
   private model: any;
   private modelName: string;
   private options: any;
 
-  constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
+  constructor(modelName: string = "gemini-2.5-flash", requestOptions?: any) {
     this.modelName = modelName;
-    this.options = requestOptions || { apiVersion: "v1" };
+    this.options = requestOptions || { apiVersion: "v1beta" };
     this.initModel(modelName, this.options);
   }
 
@@ -73,7 +73,7 @@ export class ChatAgent {
         for (const fallbackModel of FALLBACK_MODELS) {
           if (fallbackModel === this.modelName) continue;
           console.log(`[ChatAgent] Falling back to ${fallbackModel}...`);
-          const fallbackOptions = fallbackModel.includes("pro") ? { apiVersion: "v1beta" } : { apiVersion: "v1" };
+          const fallbackOptions = fallbackModel.includes("gemini") ? { apiVersion: "v1beta" } : { apiVersion: "v1" };
           this.initModel(fallbackModel, fallbackOptions);
           try {
             return await withRetry(() => attemptChat(fallbackModel, this.model));

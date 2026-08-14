@@ -15,11 +15,11 @@ export class DeployAgent {
   private model: any;
   private modelName: string;
 
-  constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
+  constructor(modelName: string = "gemini-2.5-flash", requestOptions?: any) {
     this.modelName = modelName;
     if (!modelName.includes("/")) {
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
-      this.model = genAI.getGenerativeModel({ model: modelName }, requestOptions || { apiVersion: "v1" });
+      this.model = genAI.getGenerativeModel({ model: modelName }, requestOptions || { apiVersion: "v1beta" });
     }
   }
 

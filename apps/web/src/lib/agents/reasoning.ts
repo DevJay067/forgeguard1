@@ -1,25 +1,62 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Schema, SchemaType } from "@google/generative-ai";
 import { withRetry } from "./utils";
 import { callOpenRouter } from "./openrouter";
-
-
 
 export interface AppSchema {
   entities: {
     name: string;
     fields: string[];
     accessPatterns: string[];
+    ownerField?: string;
   }[];
   relationships: string[];
   riskProfile: "Low" | "Medium" | "High";
   technicalConstraints: string[];
 }
 
+const appSchema: Schema = {
+  type: SchemaType.OBJECT,
+  properties: {
+    entities: {
+      type: SchemaType.ARRAY,
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          name: { type: SchemaType.STRING },
+          fields: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+          },
+          accessPatterns: {
+            type: SchemaType.ARRAY,
+            items: { type: SchemaType.STRING }
+          },
+          ownerField: { type: SchemaType.STRING }
+        },
+        required: ["name", "fields", "accessPatterns"]
+      }
+    },
+    relationships: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING }
+    },
+    riskProfile: {
+      type: SchemaType.STRING,
+      description: 'Must be one of "Low", "Medium", or "High"'
+    },
+    technicalConstraints: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING }
+    }
+  },
+  required: ["entities", "relationships", "riskProfile", "technicalConstraints"]
+};
+
 export class ReasoningAgent {
   private model: any;
   private modelName: string;
 
-  constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
+  constructor(modelName: string = "gemini-2.5-flash", requestOptions?: any) {
     this.modelName = modelName;
     if (!modelName.includes("/")) {
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
@@ -28,8 +65,10 @@ export class ReasoningAgent {
         generationConfig: {
           temperature: 0.1,
           topP: 0.95,
+          responseMimeType: "application/json",
+          responseSchema: appSchema
         },
-      }, requestOptions || { apiVersion: "v1" });
+      }, requestOptions || { apiVersion: "v1beta" });
     }
   }
 

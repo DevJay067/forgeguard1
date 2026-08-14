@@ -33,6 +33,731 @@ function ExpandableStepContent({ content }: { content: any }) {
   );
 }
 
+function ensureString(val: any): string {
+  if (typeof val === "string") return val;
+  if (!val) return "";
+  if (typeof val === "object") {
+    if (val.rules) {
+      return ensureString(val.rules);
+    }
+    if (val.firestore) {
+      return ensureString(val.firestore);
+    }
+    for (const key of Object.keys(val)) {
+      const extracted = ensureString(val[key]);
+      if (extracted && typeof extracted === "string" && extracted.includes("rules_version")) {
+        return extracted;
+      }
+    }
+    const values = Object.values(val);
+    if (values.length > 0) {
+      const extracted = ensureString(values[0]);
+      if (extracted) return extracted;
+    }
+    return JSON.stringify(val, null, 2);
+  }
+  return String(val);
+}
+
+interface TypewriterCodeProps {
+  code: any;
+  speed?: number;
+}
+
+function TypewriterCode({ code, speed = 1 }: TypewriterCodeProps) {
+  const [displayedCode, setDisplayedCode] = useState("");
+  const displayedCodeRef = useRef("");
+
+  useEffect(() => {
+    const codeStr = ensureString(code);
+    const currentDisplayed = displayedCodeRef.current;
+    
+    // Find the common prefix of currentDisplayed and new code string
+    let i = 0;
+    while (i < currentDisplayed.length && i < codeStr.length && currentDisplayed[i] === codeStr[i]) {
+      i++;
+    }
+    const commonPrefix = codeStr.substring(0, i);
+
+    setDisplayedCode(commonPrefix);
+    displayedCodeRef.current = commonPrefix;
+    
+    let currentLength = commonPrefix.length;
+    
+    // Smoothly type in chunks of 5 characters for standard code block updates
+    const intervalId = setInterval(() => {
+      if (currentLength < codeStr.length) {
+        currentLength += Math.min(5, codeStr.length - currentLength);
+        const nextChunk = codeStr.substring(0, currentLength);
+        setDisplayedCode(nextChunk);
+        displayedCodeRef.current = nextChunk;
+      } else {
+        clearInterval(intervalId);
+      }
+    }, speed);
+
+    return () => clearInterval(intervalId);
+  }, [code, speed]);
+
+  const renderHighlighted = (text: string) => {
+    const lines = text.split("\n");
+    return lines.map((line, lineIdx) => {
+      // Tokenize comments, strings, variables, keywords, and operators
+      const tokens = line.split(/(\/\/.*|["'].*?["']|\b(?:rules_version|service|cloud\.firestore|databases|documents|match|allow|read|write|get|list|create|update|delete|if|true|false|null|request|resource)\b|[{}();,:=<>!&|+-]|\s+)/g);
+      const isLastLine = lineIdx === lines.length - 1;
+      
+      return (
+        <div key={lineIdx} className="min-h-[1.2rem] whitespace-pre">
+          {tokens.map((token, tokenIdx) => {
+            if (!token) return null;
+            if (token.startsWith("//")) {
+              return <span key={tokenIdx} className="text-muted-foreground/60 italic">{token}</span>;
+            }
+            if (token.startsWith('"') || token.startsWith("'")) {
+              return <span key={tokenIdx} className="text-emerald-300">{token}</span>;
+            }
+            if (/^\b(rules_version|service|cloud\.firestore|databases|documents)\b$/.test(token)) {
+              return <span key={tokenIdx} className="text-indigo-400 font-bold">{token}</span>;
+            }
+            if (/^\b(match|allow)\b$/.test(token)) {
+              return <span key={tokenIdx} className="text-purple-400 font-bold">{token}</span>;
+            }
+            if (/^\b(read|write|get|list|create|update|delete)\b$/.test(token)) {
+              return <span key={tokenIdx} className="text-sky-400 font-medium">{token}</span>;
+            }
+            if (/^\b(if|true|false|null)\b$/.test(token)) {
+              return <span key={tokenIdx} className="text-amber-400 font-bold">{token}</span>;
+            }
+            if (/^\b(request|resource)\b$/.test(token)) {
+              return <span key={tokenIdx} className="text-pink-400">{token}</span>;
+            }
+            if (/^[{}();,:=<>!&|+-]$/.test(token)) {
+              return <span key={tokenIdx} className="text-slate-400">{token}</span>;
+            }
+            return <span key={tokenIdx} className="text-slate-100">{token}</span>;
+          })}
+          {isLastLine && (
+            <span className="inline-block w-1.5 h-3.5 bg-primary/80 ml-0.5 align-middle animate-pulse shadow-[0_0_8px_rgba(234,88,12,0.8)]" />
+          )}
+        </div>
+      );
+    });
+  };
+
+  return (
+    <div className="font-mono text-xs leading-relaxed select-text">
+      {renderHighlighted(displayedCode)}
+    </div>
+  );
+}
+
+function getRandomNum(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+interface DinoGameProps {
+  onClose?: () => void;
+}
+
+function DinoGame({ onClose }: DinoGameProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [gameState, setGameState] = useState<"idle" | "playing" | "gameover">("idle");
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const gameStateRef = useRef(gameState);
+  const isDuckingRef = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  // Audio synthesis helper for retro game sounds
+  const playBeep = (type: "jump" | "milestone" | "crash") => {
+    try {
+      if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtxRef.current = new AudioContextClass();
+        }
+      }
+      const audioCtx = audioCtxRef.current;
+      if (!audioCtx) return;
+      
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      const osc = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      gainNode.gain.setValueAtTime(0.015, audioCtx.currentTime);
+
+      if (type === "jump") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.05);
+      } else if (type === "milestone") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.08);
+        
+        setTimeout(() => {
+          try {
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+            gain2.gain.setValueAtTime(0.015, audioCtx.currentTime);
+            osc2.type = "square";
+            osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+            osc2.start();
+            osc2.stop(audioCtx.currentTime + 0.08);
+          } catch {}
+        }, 120);
+      } else if (type === "crash") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+        osc.frequency.linearRampToValueAtTime(30, audioCtx.currentTime + 0.22);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.25);
+      }
+    } catch (e) {
+      console.warn("Web Audio failed:", e);
+    }
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // OG Chromium Dino Configuration
+    const dinoX = 50;
+    const groundY = 135;
+    const dinoWidth = 44;
+    const dinoHeight = 47;
+    const crouchWidth = 59;
+    const crouchHeight = 25;
+    
+    // Position when on the ground
+    const groundYPos = groundY - dinoHeight;
+    const groundYPosCrouch = groundY - crouchHeight;
+    
+    // Physics constants
+    const gravity = 0.6;
+    const initialJumpVelocity = -10.0;
+    const dropVelocity = -5.0; // velocity cap if jump key released or max height hit
+    const speedDropCoefficient = 3.0; // falls faster when holding down arrow
+    
+    let dinoY = groundYPos;
+    let dinoVy = 0;
+    let jumping = false;
+    let reachedMinHeight = false;
+    let speedDrop = false;
+
+    let obstacles: { 
+      type: "cactus_s" | "cactus_d" | "cactus_t" | "cactus_l" | "bird"; 
+      x: number; 
+      y: number;
+      width: number; 
+      height: number; 
+      speed: number;
+      gap: number;
+      birdFrame?: number;
+    }[] = [];
+    
+    let clouds: { x: number; y: number; speed: number; width: number }[] = [];
+    let localScore = 0;
+    let frameCount = 0;
+    
+    // OG Speed parameters
+    let gameSpeed = 6.0;
+    const maxSpeed = 12.0;
+    const acceleration = 0.00015; // acceleration per frame
+
+    let animationId: number;
+    let milestoneCount = 0;
+    let colorSchemeAlpha = 0; // Day (0) vs Night (1)
+
+    // Initialize clouds
+    for (let j = 0; j < 3; j++) {
+      clouds.push({
+        x: Math.random() * 200 + 100,
+        y: Math.random() * 40 + 15,
+        speed: Math.random() * 0.3 + 0.1,
+        width: Math.random() * 22 + 12
+      });
+    }
+
+    const handleJump = () => {
+      if (gameStateRef.current === "idle") {
+        setGameState("playing");
+        localScore = 0;
+        setScore(0);
+        obstacles = [];
+        dinoY = groundYPos;
+        dinoVy = 0;
+        jumping = false;
+        gameSpeed = 6.0;
+        milestoneCount = 0;
+      } else if (gameStateRef.current === "playing" && !isDuckingRef.current && !jumping && dinoY === groundYPos) {
+        dinoVy = initialJumpVelocity;
+        jumping = true;
+        reachedMinHeight = false;
+        speedDrop = false;
+        playBeep("jump");
+      } else if (gameStateRef.current === "gameover") {
+        setGameState("playing");
+        localScore = 0;
+        setScore(0);
+        obstacles = [];
+        dinoY = groundYPos;
+        dinoVy = 0;
+        jumping = false;
+        gameSpeed = 6.0;
+        milestoneCount = 0;
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+        return;
+      }
+
+      if (e.code === "ArrowDown") {
+        e.preventDefault();
+        isDuckingRef.current = true;
+        if (jumping) {
+          speedDrop = true;
+          dinoVy = 1;
+        }
+      } else if (e.code === "Space" || e.code === "ArrowUp") {
+        if (gameStateRef.current === "playing") {
+          e.preventDefault();
+          handleJump();
+        } else if (e.code === "Space") {
+          e.preventDefault();
+          handleJump();
+        }
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "ArrowDown") {
+        isDuckingRef.current = false;
+        speedDrop = false;
+      } else if (e.code === "Space" || e.code === "ArrowUp") {
+        // Variable jump height: release key to drop velocity
+        if (jumping && dinoVy < dropVelocity) {
+          dinoVy = dropVelocity;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    canvas.addEventListener("click", handleJump);
+
+    const gameLoop = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      frameCount++;
+
+      const rect = canvas.getBoundingClientRect();
+      if (canvas.width !== rect.width || canvas.height !== rect.height) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+      }
+
+      // Day & Night transitions every 700 score points
+      const cycle = Math.floor(localScore / 700) % 2;
+      if (cycle === 1 && colorSchemeAlpha < 1) {
+        colorSchemeAlpha = Math.min(1, colorSchemeAlpha + 0.02);
+      } else if (cycle === 0 && colorSchemeAlpha > 0) {
+        colorSchemeAlpha = Math.max(0, colorSchemeAlpha - 0.02);
+      }
+
+      if (colorSchemeAlpha > 0) {
+        ctx.fillStyle = `rgba(18, 18, 18, ${colorSchemeAlpha})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      const mainThemeColor = colorSchemeAlpha > 0.5 
+        ? `rgb(${Math.floor(255 - 121 * (1 - colorSchemeAlpha))}, ${Math.floor(255 - 197 * (1 - colorSchemeAlpha))}, ${Math.floor(255 - 243 * (1 - colorSchemeAlpha))})`
+        : "#ea580c";
+      
+      const hazardColor = colorSchemeAlpha > 0.5 ? "#fca5a5" : "#ef4444";
+
+      // Draw horizon ground line
+      ctx.strokeStyle = colorSchemeAlpha > 0.5 ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      // Update & Draw Clouds
+      ctx.fillStyle = colorSchemeAlpha > 0.5 ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.08)";
+      clouds.forEach(cloud => {
+        if (gameStateRef.current === "playing") {
+          cloud.x -= cloud.speed;
+        }
+        if (cloud.x + cloud.width < 0) {
+          cloud.x = canvas.width + Math.random() * 80;
+          cloud.y = Math.random() * 40 + 15;
+        }
+        ctx.beginPath();
+        ctx.arc(cloud.x, cloud.y, 6, 0, Math.PI * 2);
+        ctx.arc(cloud.x + 6, cloud.y - 3, 8, 0, Math.PI * 2);
+        ctx.arc(cloud.x + 12, cloud.y, 6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      const isCrouching = isDuckingRef.current && dinoY === groundYPos;
+      const currentDinoHeight = isCrouching ? crouchHeight : dinoHeight;
+      const currentDinoWidth = isCrouching ? crouchWidth : dinoWidth;
+      const currentDinoY = isCrouching ? groundYPosCrouch : dinoY;
+
+      // Dino physics
+      if (gameStateRef.current === "playing") {
+        if (jumping) {
+          if (speedDrop) {
+            dinoY += dinoVy * speedDropCoefficient;
+          } else {
+            dinoY += dinoVy;
+          }
+          dinoVy += gravity;
+          
+          // Reached min height threshold
+          if (dinoY < groundYPos - 30) {
+            reachedMinHeight = true;
+          }
+          // Cap jump peak at 30 pixels absolute height from top
+          if (dinoY < 30) {
+            if (dinoVy < dropVelocity) {
+              dinoVy = dropVelocity;
+            }
+          }
+          
+          // Landed back on ground
+          if (dinoY >= groundYPos) {
+            dinoY = groundYPos;
+            dinoVy = 0;
+            jumping = false;
+            speedDrop = false;
+          }
+        }
+
+        // Increment Score
+        localScore += 0.15;
+        setScore(Math.floor(localScore));
+
+        // Score Milestone sound
+        const scoreMilestone = Math.floor(localScore / 100);
+        if (scoreMilestone > milestoneCount) {
+          milestoneCount = scoreMilestone;
+          playBeep("milestone");
+        }
+
+        // Slowly accelerate game speed up to max speed
+        if (gameSpeed < maxSpeed) {
+          gameSpeed += acceleration;
+        }
+      }
+
+      // Draw Dino Silhouette
+      ctx.fillStyle = mainThemeColor;
+      if (isCrouching) {
+        // crouching shape (accurate silhouette details)
+        ctx.fillRect(dinoX + 16, currentDinoY + 2, 22, 14); // main head block
+        ctx.fillRect(dinoX + 38, currentDinoY + 6, 16, 8);  // snout
+        ctx.fillRect(dinoX + 8, currentDinoY + 8, 24, 14);  // body
+        ctx.fillRect(dinoX, currentDinoY + 6, 8, 6);       // tail tip
+        ctx.fillRect(dinoX + 6, currentDinoY + 10, 8, 6);   // tail center
+        ctx.fillRect(dinoX + 30, currentDinoY + 16, 6, 3);   // arm
+        // Eye
+        ctx.fillStyle = colorSchemeAlpha > 0.5 ? "#121212" : "#10b981";
+        ctx.fillRect(dinoX + 26, currentDinoY + 4, 3, 3);
+      } else {
+        // standing shape (accurate silhouette details)
+        ctx.fillRect(dinoX + 20, currentDinoY, 20, 16);     // head main block
+        ctx.fillRect(dinoX + 20, currentDinoY + 16, 12, 4);  // lower jaw
+        ctx.fillRect(dinoX + 20, currentDinoY + 16, 6, 10);  // neck
+        ctx.fillRect(dinoX + 10, currentDinoY + 20, 16, 20); // main body block
+        ctx.fillRect(dinoX, currentDinoY + 16, 4, 12);       // tail top
+        ctx.fillRect(dinoX + 4, currentDinoY + 22, 6, 12);   // tail middle
+        ctx.fillRect(dinoX + 8, currentDinoY + 28, 4, 8);    // tail bottom
+        ctx.fillRect(dinoX + 26, currentDinoY + 22, 6, 3);   // arm
+        // Eye
+        ctx.fillStyle = colorSchemeAlpha > 0.5 ? "#121212" : "#10b981";
+        ctx.fillRect(dinoX + 26, currentDinoY + 4, 3, 3);
+      }
+
+      // Feet running animation cycle
+      ctx.fillStyle = mainThemeColor;
+      const footCycle = Math.floor(frameCount / 6) % 2;
+      if (gameStateRef.current === "playing" && dinoY === groundYPos) {
+        if (isCrouching) {
+          ctx.fillRect(dinoX + 14, currentDinoY + crouchHeight, 5, 2);
+          ctx.fillRect(dinoX + 26, currentDinoY + crouchHeight, 5, 2);
+          ctx.fillStyle = colorSchemeAlpha > 0.5 ? "#121212" : "#000";
+          if (footCycle === 0) {
+            ctx.fillRect(dinoX + 14, currentDinoY + crouchHeight, 5, 1);
+          } else {
+            ctx.fillRect(dinoX + 26, currentDinoY + crouchHeight, 5, 1);
+          }
+        } else {
+          ctx.fillRect(dinoX + 12, currentDinoY + dinoHeight - 4, 5, 4);
+          ctx.fillRect(dinoX + 22, currentDinoY + dinoHeight - 4, 5, 4);
+          ctx.fillStyle = colorSchemeAlpha > 0.5 ? "#121212" : "#000";
+          if (footCycle === 0) {
+            ctx.fillRect(dinoX + 12, currentDinoY + dinoHeight - 2, 5, 2);
+          } else {
+            ctx.fillRect(dinoX + 22, currentDinoY + dinoHeight - 2, 5, 2);
+          }
+        }
+      } else if (gameStateRef.current === "playing") {
+        // Air feet
+        if (isCrouching) {
+          ctx.fillRect(dinoX + 16, currentDinoY + crouchHeight, 5, 2);
+        } else {
+          ctx.fillRect(dinoX + 14, currentDinoY + dinoHeight - 4, 5, 4);
+          ctx.fillRect(dinoX + 20, currentDinoY + dinoHeight - 4, 5, 4);
+        }
+      } else {
+        // Idle feet
+        ctx.fillRect(dinoX + 12, currentDinoY + dinoHeight - 4, 5, 4);
+        ctx.fillRect(dinoX + 22, currentDinoY + dinoHeight - 4, 5, 4);
+      }
+
+      // Obstacle physics and rendering
+      if (gameStateRef.current === "playing") {
+        const lastObs = obstacles[obstacles.length - 1];
+        
+        // Spawn checks matching Chromium's gap factor
+        if (obstacles.length === 0 || (canvas.width - lastObs.x >= lastObs.gap)) {
+          const spawnBird = localScore > 350 && Math.random() < 0.22;
+          
+          if (spawnBird) {
+            const birdHeights = [groundY - 38, groundY - 24, groundY - 14];
+            const yPos = birdHeights[Math.floor(Math.random() * birdHeights.length)];
+            
+            // Bird width: 22, height: 12
+            const width = 22;
+            const minGap = 130;
+            const gapFactor = 0.6;
+            const gap = Math.round(width * gameSpeed + minGap * gapFactor);
+            
+            obstacles.push({
+              type: "bird",
+              x: canvas.width,
+              y: yPos,
+              width,
+              height: 12,
+              speed: gameSpeed,
+              gap: getRandomNum(gap, Math.round(gap * 1.5)),
+              birdFrame: 0
+            });
+          } else {
+            const randType = Math.random();
+            let type: "cactus_s" | "cactus_d" | "cactus_t" | "cactus_l" = "cactus_s";
+            let width = 17;
+            let height = 35;
+            let minGap = 120;
+            let yPos = groundY - height;
+
+            if (randType > 0.85) {
+              type = "cactus_t";
+              width = 45; // triple small cactus
+              height = 35;
+              minGap = 120;
+              yPos = groundY - height;
+            } else if (randType > 0.60) {
+              type = "cactus_d";
+              width = 30; // double large/small cactus
+              height = 38;
+              minGap = 120;
+              yPos = groundY - height;
+            } else if (randType > 0.35) {
+              type = "cactus_l";
+              width = 25; // single large cactus
+              height = 50;
+              minGap = 150;
+              yPos = groundY - height;
+            }
+
+            const gapFactor = 0.6;
+            const gap = Math.round(width * gameSpeed + minGap * gapFactor);
+
+            obstacles.push({
+              type,
+              x: canvas.width,
+              y: yPos,
+              width,
+              height,
+              speed: gameSpeed,
+              gap: getRandomNum(gap, Math.round(gap * 1.5))
+            });
+          }
+        }
+
+        // Draw and update obstacles
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.x -= obs.speed;
+
+          if (obs.type === "bird") {
+            ctx.fillStyle = mainThemeColor;
+            obs.birdFrame = obs.birdFrame !== undefined ? obs.birdFrame + 1 : 0;
+            ctx.fillRect(obs.x + 4, obs.y + 3, 14, 6);
+            ctx.fillRect(obs.x, obs.y + 4, 4, 3);
+            
+            const isWingUp = Math.floor(obs.birdFrame / 10) % 2 === 0;
+            if (isWingUp) {
+              ctx.fillRect(obs.x + 8, obs.y - 4, 4, 7);
+            } else {
+              ctx.fillRect(obs.x + 8, obs.y + 8, 4, 7);
+            }
+          } else {
+            ctx.fillStyle = hazardColor;
+            
+            if (obs.type === "cactus_s") {
+              // single small cactus: trunk + branches
+              ctx.fillRect(obs.x + 6, obs.y, 5, obs.height);
+              ctx.fillRect(obs.x + 2, obs.y + 10, 4, 4);
+              ctx.fillRect(obs.x + 2, obs.y + 6, 2, 8);
+              ctx.fillRect(obs.x + 11, obs.y + 14, 4, 4);
+              ctx.fillRect(obs.x + 13, obs.y + 10, 2, 8);
+            } else if (obs.type === "cactus_d") {
+              // double cactus: Cactus 1 (small) + Cactus 2 (medium/tall)
+              // Cactus 1 (left)
+              ctx.fillRect(obs.x + 4, obs.y + 3, 4, obs.height - 3);
+              ctx.fillRect(obs.x + 1, obs.y + 12, 3, 3);
+              ctx.fillRect(obs.x + 1, obs.y + 9, 2, 6);
+              ctx.fillRect(obs.x + 8, obs.y + 15, 3, 3);
+              ctx.fillRect(obs.x + 9, obs.y + 11, 2, 6);
+              // Cactus 2 (right)
+              ctx.fillRect(obs.x + 18, obs.y, 5, obs.height);
+              ctx.fillRect(obs.x + 13, obs.y + 10, 5, 4);
+              ctx.fillRect(obs.x + 13, obs.y + 6, 2, 8);
+              ctx.fillRect(obs.x + 23, obs.y + 14, 5, 4);
+              ctx.fillRect(obs.x + 25, obs.y + 10, 3, 8);
+            } else if (obs.type === "cactus_t") {
+              // triple cactus: Cactus 1 + Cactus 2 + Cactus 3
+              // Cactus 1 (left)
+              ctx.fillRect(obs.x + 3, obs.y + 5, 4, obs.height - 5);
+              // Cactus 2 (middle)
+              ctx.fillRect(obs.x + 18, obs.y, 5, obs.height);
+              ctx.fillRect(obs.x + 13, obs.y + 10, 5, 4);
+              ctx.fillRect(obs.x + 13, obs.y + 6, 2, 8);
+              ctx.fillRect(obs.x + 23, obs.y + 13, 5, 4);
+              ctx.fillRect(obs.x + 25, obs.y + 9, 3, 8);
+              // Cactus 3 (right)
+              ctx.fillRect(obs.x + 36, obs.y + 3, 4, obs.height - 3);
+            } else if (obs.type === "cactus_l") {
+              // single large cactus: trunk + branches
+              ctx.fillRect(obs.x + 9, obs.y, 7, obs.height);
+              ctx.fillRect(obs.x + 2, obs.y + 14, 7, 5);
+              ctx.fillRect(obs.x + 2, obs.y + 9, 3, 10);
+              ctx.fillRect(obs.x + 16, obs.y + 18, 7, 5);
+              ctx.fillRect(obs.x + 20, obs.y + 13, 3, 10);
+            }
+          }
+
+          // Forgiving hitboxes with 3.5px padding
+          const dPadW = 3.5;
+          const dPadH = 3.5;
+          const oPadW = 3.5;
+          const oPadH = 3.5;
+          
+          const collided = (dinoX + dPadW) < (obs.x + obs.width - oPadW) &&
+            (dinoX + currentDinoWidth - dPadW) > (obs.x + oPadW) &&
+            (currentDinoY + dPadH) < (obs.y + obs.height - oPadH) &&
+            (currentDinoY + currentDinoHeight - dPadH) > (obs.y + oPadH);
+
+          if (collided) {
+            setGameState("gameover");
+            playBeep("crash");
+            setHighScore(prev => Math.max(prev, Math.floor(localScore)));
+          }
+
+          if (obs.x + obs.width < 0) {
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      // Overlay text rendering
+      if (gameStateRef.current === "idle") {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.font = "bold 13px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("PRESS SPACE OR CLICK TO PLAY 🦖", canvas.width / 2, canvas.height / 2 - 10);
+        ctx.font = "9px monospace";
+        ctx.fillStyle = colorSchemeAlpha > 0.5 ? "rgba(255, 255, 255, 0.4)" : "rgba(255, 255, 255, 0.45)";
+        ctx.fillText("Up/Down to jump/duck (Variable Jump height enabled!)", canvas.width / 2, canvas.height / 2 + 10);
+      } else if (gameStateRef.current === "gameover") {
+        ctx.fillStyle = "#ef4444";
+        ctx.font = "bold 16px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 15);
+        ctx.fillStyle = colorSchemeAlpha > 0.5 ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.85)";
+        ctx.font = "11px monospace";
+        ctx.fillText("PRESS SPACE OR CLICK TO RESTART", canvas.width / 2, canvas.height / 2 + 10);
+      }
+
+      animationId = requestAnimationFrame(gameLoop);
+    };
+
+    gameLoop();
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      canvas.removeEventListener("click", handleJump);
+      cancelAnimationFrame(animationId);
+    };
+  }, []);
+
+  return (
+    <div className="w-full bg-background/60 backdrop-blur-lg rounded-3xl p-5 shadow-xl flex flex-col justify-center border-2 border-border/50 relative overflow-hidden group select-none animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Background radial highlight */}
+      <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/5 via-rose-500/5 to-indigo-500/5 opacity-40 blur-xl group-hover:opacity-60 transition-opacity pointer-events-none" />
+
+      <div className="flex justify-between items-center mb-2.5 relative z-10">
+        <h3 className="text-xs font-bold text-muted-foreground/80 tracking-widest uppercase flex items-center gap-1.5">
+          🦖 OG Chrome Dino Clone
+        </h3>
+        <div className="flex items-center gap-3">
+          <div className="flex gap-4 font-mono text-[10px] font-bold">
+            <span className="text-primary">SCORE: {score}</span>
+            <span className="text-muted-foreground">HI: {highScore}</span>
+          </div>
+          {onClose && (
+            <button 
+              onClick={onClose} 
+              className="text-muted-foreground/60 hover:text-foreground/80 transition-colors p-0.5 rounded-lg hover:bg-white/5"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+      
+      <div className="relative bg-black/45 rounded-2xl border border-white/5 h-[150px] overflow-hidden">
+        <canvas ref={canvasRef} className="w-full h-full cursor-pointer" />
+      </div>
+    </div>
+  );
+}
+
 const DEFAULT_FIRESTORE_RULES = `rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -100,7 +825,7 @@ export default function OrchestrationPage() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   
-  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
   
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
@@ -120,6 +845,9 @@ export default function OrchestrationPage() {
 
   // ── NEW STATE: Streaming Rules & Diffing ──
   const [streamingRules, setStreamingRules] = useState("");
+  
+  // ── NEW STATE: Dino Game Close Control ──
+  const [showGame, setShowGame] = useState(true);
   
   const router = useRouter();
   const endOfStepsRef = useRef<HTMLDivElement>(null);
@@ -273,7 +1001,7 @@ export default function OrchestrationPage() {
     setLoading(true);
     setResult(null);
     setStreamingRules("");
-    setSteps([{ title: "Initialization", content: `Connecting to ForgeGuard Orchestrator (${orchestrationMode} mode)...` }]);
+    setShowGame(true);
     setSteps([{ title: "Initialization", content: `Connecting to ForgeGuard Orchestrator (${orchestrationMode} mode)...` }]);
 
     try {
@@ -361,10 +1089,8 @@ export default function OrchestrationPage() {
   };
 
   const AVAILABLE_MODELS = [
-    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", tier: "Free" },
-    { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", tier: "Free" },
+    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", tier: "Free" },
     { id: "google/gemma-4-31b-it:free", name: "Gemma 4 31B (OpenRouter)", tier: "Free" },
-    { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", tier: "Pro" },
   ];
 
   // ── Computed values for the UI ──
@@ -373,10 +1099,10 @@ export default function OrchestrationPage() {
   const isImproveResult = result?.mode === "improve";
   const improvements = result?.improvements || [];
   
-  const currentActiveRules = result?.afterRules || result?.rules || streamingRules;
+  const currentActiveRules = ensureString(result?.afterRules || result?.rules || streamingRules);
   const displayRules = rulesView === "before" && result?.beforeRules 
-    ? result.beforeRules 
-    : (currentActiveRules || (orchestrationMode === "improve" ? existingRules : DEFAULT_FIRESTORE_RULES));
+    ? ensureString(result.beforeRules) 
+    : (currentActiveRules || ensureString(orchestrationMode === "improve" ? existingRules : DEFAULT_FIRESTORE_RULES));
   const canDeploy = result && (afterScore !== undefined && afterScore >= 90);
   const showDiff = orchestrationMode === "improve" && existingRules && currentActiveRules && rulesView === "after";
 
@@ -777,7 +1503,7 @@ export default function OrchestrationPage() {
             <section className="lg:col-span-7 flex flex-col gap-6 h-[700px] min-w-0">
               
               {/* Output Code Window */}
-              <div className="flex-1 bg-background/40 backdrop-blur-sm rounded-[2.5rem] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.02)] flex flex-col relative group border border-border/20">
+              <div className="flex-1 min-h-0 bg-background/40 backdrop-blur-sm rounded-[2.5rem] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.02)] flex flex-col relative group border border-border/20">
                 <div className="bg-card px-5 py-4 flex justify-between items-center shrink-0 rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.01)] mb-4 border border-transparent">
                   <div className="flex items-center gap-3">
                     <Code2 className="w-5 h-5 text-muted-foreground" />
@@ -806,7 +1532,7 @@ export default function OrchestrationPage() {
                     <div className="w-3.5 h-3.5 rounded-full bg-green-500/80 shadow-inner"></div>
                   </div>
                 </div>
-                <pre className="flex-1 p-6 text-xs overflow-auto text-primary font-mono custom-scrollbar bg-card rounded-3xl shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] border border-transparent">
+                <pre className="flex-1 min-h-0 p-6 text-xs overflow-auto text-primary font-mono custom-scrollbar bg-card rounded-3xl shadow-[inset_4px_4px_8px_rgba(0,0,0,0.3),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] border border-transparent">
                   {showDiff ? (
                     <div className="flex flex-col min-w-max">
                       {computeDiff(existingRules, currentActiveRules).map((line, idx) => {
@@ -830,7 +1556,7 @@ export default function OrchestrationPage() {
                       })}
                     </div>
                   ) : (
-                    displayRules || "// The generated rules will appear here..."
+                    displayRules ? <TypewriterCode code={displayRules} /> : "// The generated rules will appear here..."
                   )}
                 </pre>
               </div>
@@ -971,6 +1697,11 @@ export default function OrchestrationPage() {
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+              {loading && !streamingRules && !result && showGame && (
+                <div className="shrink-0">
+                  <DinoGame onClose={() => setShowGame(false)} />
                 </div>
               )}
             </section>

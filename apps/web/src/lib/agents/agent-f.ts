@@ -25,7 +25,7 @@ export class AgentF {
   private model: any;
   private modelName: string;
 
-  constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
+  constructor(modelName: string = "gemini-2.5-flash", requestOptions?: any) {
     this.modelName = modelName;
     if (!modelName.includes("/")) {
       const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "");
@@ -36,7 +36,7 @@ export class AgentF {
           responseMimeType: "application/json",
           responseSchema: rulesSchema
         }
-      }, requestOptions || { apiVersion: "v1" });
+      }, requestOptions || { apiVersion: "v1beta" });
     }
   }
 
@@ -61,7 +61,8 @@ export class AgentF {
         let text: string;
         if (this.modelName.includes("/")) {
           text = await callOpenRouter(this.modelName, [
-            { role: "system", content: systemPrompt + "\\n\\nOutput MUST be valid JSON with 'rules' and 'reasoning' keys." }
+            { role: "system", content: systemPrompt },
+            { role: "user", content: "Generate the Firebase Security Rules based on the schema and feedback context. Output MUST be valid JSON with 'rules' and 'reasoning' keys." }
           ]);
         } else {
           const result = await this.model.generateContent(systemPrompt);
@@ -140,7 +141,8 @@ export class AgentF {
         let text: string;
         if (this.modelName.includes("/")) {
           text = await callOpenRouter(this.modelName, [
-            { role: "system", content: systemPrompt + "\n\nOutput MUST be valid JSON with 'rules' and 'improvements' keys." }
+            { role: "system", content: systemPrompt },
+            { role: "user", content: "Improve the Firebase Security Rules based on the audit findings and context. Output MUST be valid JSON with 'rules' and 'improvements' keys." }
           ]);
         } else {
           const result = await this.model.generateContent(systemPrompt);

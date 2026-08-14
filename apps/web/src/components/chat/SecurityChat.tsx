@@ -17,15 +17,13 @@ interface SecurityChatProps {
 }
 
 const AVAILABLE_MODELS = [
-  { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash (Fastest)", tier: "Free" },
-  { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash (Reliable)", tier: "Free" },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash (Fastest)", tier: "Free" },
   { id: "google/gemma-4-31b-it:free", name: "Gemma 4 31B (Open Source)", tier: "Free" },
   { id: "google/gemma-4-26b-a4b-it:free", name: "Gemma 4 26B (MoE Free)", tier: "Free" },
-  { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro (Intelligent)", tier: "Pro" },
 ];
 
 export function SecurityChat({ orchestrationContext, userPlan = "Free" }: SecurityChatProps) {
-  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",

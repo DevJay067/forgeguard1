@@ -4,6 +4,7 @@ import { doc, getDoc, setDoc, updateDoc, increment } from "firebase/firestore";
 // Approximate pricing per 1k tokens (in USD)
 // These are estimates for cost control logic
 const PRICING: Record<string, { input: number; output: number }> = {
+  "gemini-2.5-flash": { input: 0.000075, output: 0.0003 },
   "gemini-2.0-flash": { input: 0.0001, output: 0.0004 },
   "gemini-1.5-flash": { input: 0.000075, output: 0.0003 },
   "gemini-1.5-pro": { input: 0.00125, output: 0.005 },
@@ -37,7 +38,7 @@ export async function trackUsage(userId: string, model: string, inputTokens: num
     const today = new Date().toISOString().split('T')[0];
     const usageRef = doc(db, "usage", `${userId}_${today}`);
     
-    const pricing = PRICING[model] || PRICING["gemini-2.0-flash"];
+    const pricing = PRICING[model] || PRICING["gemini-2.5-flash"];
     const cost = ((inputTokens / 1000) * pricing.input) + ((outputTokens / 1000) * pricing.output);
     
     await setDoc(usageRef, {

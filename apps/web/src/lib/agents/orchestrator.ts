@@ -4,7 +4,7 @@ import { AuditorAgent, AuditResult } from "./auditor";
 import { SimulatorAgent } from "./simulator";
 import { ValidatorAgent, ValidationResult } from "./validator";
 
-const FALLBACK_MODELS = ["gemini-1.5-flash", "google/gemma-4-26b-a4b-it:free", "gemini-2.0-flash"];
+const FALLBACK_MODELS = ["google/gemma-4-26b-a4b-it:free", "gemini-2.5-flash"];
 
 export class ForgeGuardOrchestrator {
   private reasoning: ReasoningAgent;
@@ -14,7 +14,7 @@ export class ForgeGuardOrchestrator {
   private validator: ValidatorAgent;
   private currentModel: string;
 
-  constructor(modelName: string = "gemini-2.0-flash", requestOptions?: any) {
+  constructor(modelName: string = "gemini-2.5-flash", requestOptions?: any) {
     this.currentModel = modelName;
     this.reasoning = new ReasoningAgent(modelName, requestOptions);
     this.agentF = new AgentF(modelName, requestOptions);
@@ -124,6 +124,8 @@ export class ForgeGuardOrchestrator {
       lastAudit.critique += "\n\nCRITICAL: Emulator validation failed! Real-world tests did not pass.";
       lastAudit.score = Math.min(lastAudit.score, 40);
       lastAudit.isSecure = false;
+    } else if (validationResult && (validationResult as any).skipped) {
+      lastAudit.critique += "\n\nNOTE: Emulator validation skipped (Firestore emulator not running/configured).";
     }
 
     onStep?.("Finalizing", "Verifying rule integrity and preparing deployment plan...");
@@ -216,6 +218,8 @@ export class ForgeGuardOrchestrator {
       lastAudit.critique += "\n\nCRITICAL: Emulator validation failed on some tests.";
       lastAudit.score = Math.min(lastAudit.score, 40);
       lastAudit.isSecure = false;
+    } else if (validationResult && (validationResult as any).skipped) {
+      lastAudit.critique += "\n\nNOTE: Emulator validation skipped (Firestore emulator not running/configured).";
     }
 
     // Calculate improvement metrics

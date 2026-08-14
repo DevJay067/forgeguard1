@@ -4,10 +4,32 @@ import { ForgeGuardOrchestrator } from "@/lib/agents/orchestrator";
 import { z } from "zod";
 import { validateAndSanitizePrompt } from "@/lib/agents/promptGuard";
 
+function extractRulesString(val: any): string {
+  if (typeof val === "string") return val;
+  if (!val) return "";
+  if (typeof val === "object") {
+    if (val.rules) return extractRulesString(val.rules);
+    if (val.firestore) return extractRulesString(val.firestore);
+    for (const key of Object.keys(val)) {
+      const extracted = extractRulesString(val[key]);
+      if (extracted && typeof extracted === "string" && extracted.includes("rules_version")) {
+        return extracted;
+      }
+    }
+    const values = Object.values(val);
+    if (values.length > 0) {
+      const extracted = extractRulesString(values[0]);
+      if (extracted) return extracted;
+    }
+    return JSON.stringify(val, null, 2);
+  }
+  return String(val);
+}
+
 // Robust Request Schema — now supports both generate and improve modes
 const OrchestrateRequestSchema = z.object({
   prompt: z.string().min(1).max(100000),
-  model: z.string().default("gemini-2.0-flash"),
+  model: z.string().default("gemini-2.5-flash"),
   userId: z.string().default("anonymous"),
   mode: z.enum(["generate", "improve"]).default("generate"),
   existingRules: z.string().optional(),
@@ -69,7 +91,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    const requestOptions = model.includes("pro") ? { apiVersion: "v1beta" } : { apiVersion: "v1" };
+    const requestOptions = { apiVersion: "v1beta" };
     const orchestrator = new ForgeGuardOrchestrator(model, requestOptions);
 
     // 5. Execution with Streaming Response
@@ -90,10 +112,8 @@ export async function POST(req: Request) {
               sendEvent("step", { step, data });
             });
 
-            // Safeguard against LLM returning an object instead of string
-            if (typeof result.afterRules === "object" && result.afterRules !== null) {
-              result.afterRules = Object.values(result.afterRules)[0] || JSON.stringify(result.afterRules, null, 2);
-            }
+            // Safeguard against LLM returning a nested object/JSON instead of raw string
+            result.afterRules = extractRulesString(result.afterRules);
 
             const rulesHash = crypto.createHash("sha256").update(result.afterRules || "").digest("hex");
 
@@ -125,10 +145,8 @@ export async function POST(req: Request) {
               sendEvent("step", { step, data });
             });
 
-            // Safeguard against LLM returning an object instead of string
-            if (typeof result.rules === "object" && result.rules !== null) {
-              result.rules = Object.values(result.rules)[0] || JSON.stringify(result.rules, null, 2);
-            }
+            // Safeguard against LLM returning a nested object/JSON instead of raw string
+            result.rules = extractRulesString(result.rules);
 
             const rulesHash = crypto.createHash("sha256").update(result.rules || "").digest("hex");
 

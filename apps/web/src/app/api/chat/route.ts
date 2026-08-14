@@ -5,7 +5,7 @@ import { checkSpendingLimit, trackUsage } from "@/lib/usage";
 
 const ChatRequestSchema = z.object({
   message: z.string().min(1),
-  model: z.string().default("gemini-2.0-flash"),
+  model: z.string().default("gemini-2.5-flash"),
   context: z.any().optional(),
   plan: z.string().default("Free"),
   userId: z.string().default("anonymous"),
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     
     userUsage[identifier].count++;
 
-    const requestOptions = model.includes("pro") ? { apiVersion: "v1beta" } : { apiVersion: "v1" };
+    const requestOptions = { apiVersion: "v1beta" };
     const chatAgent = new ChatAgent(model, requestOptions);
     const response = await chatAgent.chat(message, context);
 

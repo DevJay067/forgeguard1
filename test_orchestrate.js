@@ -5,8 +5,8 @@ async function test() {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      prompt: "Test architecture",
-      model: "gemini-2.0-flash",
+      prompt: "Create a blog application with posts and comments where users can write their own posts and comment.",
+      model: "gemini-2.5-flash",
       userId: "anonymous"
     })
   });
