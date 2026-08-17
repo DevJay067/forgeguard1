@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Shield, Lock, Terminal, ShieldAlert, CheckCircle2, Loader2, Sparkles, Code2, Play, MessageSquare, ArrowLeft, User as UserIcon, CreditCard, Activity, LogOut, Settings, Folder, Plus, ChevronDown, X, Trash2, Plug, Unplug, Download, Upload, ArrowRight, TrendingDown, AlertTriangle, Rocket, RefreshCw, Eye, FileCode2, Zap, Server } from "lucide-react";
 import { SecurityChat } from "@/components/chat/SecurityChat";
+import RulesPlayground from "@/components/playground/RulesPlayground";
 import { Component as GridBackground } from "@/components/ui/grid-background";
 import GlassSurface from "@/components/ui/GlassSurface";
 import Link from "next/link";
@@ -250,9 +251,9 @@ function DinoGame({ onClose }: DinoGameProps) {
     const groundYPosCrouch = groundY - crouchHeight;
     
     // Physics constants
-    const gravity = 0.6;
-    const initialJumpVelocity = -10.0;
-    const dropVelocity = -5.0; // velocity cap if jump key released or max height hit
+    const gravity = 0.42;
+    const initialJumpVelocity = -11.0;
+    const dropVelocity = -4.5; // velocity cap if jump key released or max height hit
     const speedDropCoefficient = 3.0; // falls faster when holding down arrow
     
     let dinoY = groundYPos;
@@ -277,9 +278,9 @@ function DinoGame({ onClose }: DinoGameProps) {
     let frameCount = 0;
     
     // OG Speed parameters
-    let gameSpeed = 6.0;
-    const maxSpeed = 12.0;
-    const acceleration = 0.00015; // acceleration per frame
+    let gameSpeed = 3.5;
+    const maxSpeed = 7.0;
+    const acceleration = 0.00008; // acceleration per frame
 
     let animationId: number;
     let milestoneCount = 0;
@@ -304,7 +305,7 @@ function DinoGame({ onClose }: DinoGameProps) {
         dinoY = groundYPos;
         dinoVy = 0;
         jumping = false;
-        gameSpeed = 6.0;
+        gameSpeed = 3.5;
         milestoneCount = 0;
       } else if (gameStateRef.current === "playing" && !isDuckingRef.current && !jumping && dinoY === groundYPos) {
         dinoVy = initialJumpVelocity;
@@ -320,7 +321,7 @@ function DinoGame({ onClose }: DinoGameProps) {
         dinoY = groundYPos;
         dinoVy = 0;
         jumping = false;
-        gameSpeed = 6.0;
+        gameSpeed = 3.5;
         milestoneCount = 0;
       }
     };
@@ -361,9 +362,15 @@ function DinoGame({ onClose }: DinoGameProps) {
       }
     };
 
+    const handleTouch = (e: TouchEvent) => {
+      e.preventDefault();
+      handleJump();
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
-    canvas.addEventListener("click", handleJump);
+    canvas.addEventListener("mousedown", handleJump);
+    canvas.addEventListener("touchstart", handleTouch, { passive: false });
 
     const gameLoop = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -550,8 +557,8 @@ function DinoGame({ onClose }: DinoGameProps) {
             
             // Bird width: 22, height: 12
             const width = 22;
-            const minGap = 130;
-            const gapFactor = 0.6;
+            const minGap = 220;
+            const gapFactor = 0.8;
             const gap = Math.round(width * gameSpeed + minGap * gapFactor);
             
             obstacles.push({
@@ -569,30 +576,30 @@ function DinoGame({ onClose }: DinoGameProps) {
             let type: "cactus_s" | "cactus_d" | "cactus_t" | "cactus_l" = "cactus_s";
             let width = 17;
             let height = 35;
-            let minGap = 120;
+            let minGap = 200;
             let yPos = groundY - height;
 
             if (randType > 0.85) {
               type = "cactus_t";
               width = 45; // triple small cactus
               height = 35;
-              minGap = 120;
+              minGap = 200;
               yPos = groundY - height;
             } else if (randType > 0.60) {
               type = "cactus_d";
               width = 30; // double large/small cactus
               height = 38;
-              minGap = 120;
+              minGap = 200;
               yPos = groundY - height;
             } else if (randType > 0.35) {
               type = "cactus_l";
               width = 25; // single large cactus
               height = 50;
-              minGap = 150;
+              minGap = 250;
               yPos = groundY - height;
             }
 
-            const gapFactor = 0.6;
+            const gapFactor = 0.8;
             const gap = Math.round(width * gameSpeed + minGap * gapFactor);
 
             obstacles.push({
@@ -720,7 +727,8 @@ function DinoGame({ onClose }: DinoGameProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
-      canvas.removeEventListener("click", handleJump);
+      canvas.removeEventListener("mousedown", handleJump);
+      canvas.removeEventListener("touchstart", handleTouch);
       cancelAnimationFrame(animationId);
     };
   }, []);
@@ -813,7 +821,7 @@ function computeDiff(oldStr: string, newStr: string): DiffLine[] {
 }
 
 export default function OrchestrationPage() {
-  const [viewMode, setViewMode] = useState<"dashboard" | "chat" | "profile" | "settings">("dashboard");
+  const [viewMode, setViewMode] = useState<"dashboard" | "chat" | "profile" | "settings" | "playground">("dashboard");
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -1018,8 +1026,20 @@ export default function OrchestrationPage() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || errData.error || "Failed to start orchestration");
+        let errMsg = "Failed to start orchestration";
+        try {
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const errData = await res.json();
+            errMsg = errData.message || errData.error || errMsg;
+          } else {
+            const text = await res.text();
+            errMsg = text.substring(0, 100) || res.statusText || errMsg;
+          }
+        } catch {
+          errMsg = res.statusText || errMsg;
+        }
+        throw new Error(errMsg);
       }
 
       if (!res.body) throw new Error("No body in response");
@@ -1112,12 +1132,12 @@ export default function OrchestrationPage() {
       <main className="grow flex flex-col items-center pt-10 pb-24 px-4 relative z-10 w-full max-w-7xl mx-auto">
         
         {/* Navigation & Toggle Header */}
-        <div className="w-full flex justify-between items-center mb-12">
-          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium w-[120px]">
+        <div className="w-full flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
+          <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm font-medium w-full md:w-[120px] justify-center md:justify-start">
             <ArrowLeft className="w-4 h-4" /> Back to Home
           </Link>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             {/* Model Selector Dropdown */}
             <div className="relative group/model z-50">
                <GlassSurface 
@@ -1247,11 +1267,17 @@ export default function OrchestrationPage() {
                 >
                   <MessageSquare className="w-4 h-4" /> Security Chat
                 </button>
+                <button 
+                  onClick={() => setViewMode("playground")}
+                  className={`flex items-center gap-2 px-6 h-full rounded-lg text-sm font-bold transition-all ${viewMode === "playground" ? "bg-primary/90 text-primary-foreground/90 shadow-md" : "text-muted-foreground hover:text-foreground/80"}`}
+                >
+                  <Terminal className="w-4 h-4" /> Rules Tester
+                </button>
               </div>
             </GlassSurface>
           </div>
           
-          <div className="w-[120px] flex justify-end">
+          <div className="w-full md:w-[120px] flex justify-center md:justify-end">
             <button 
               onClick={() => setViewMode(viewMode === "profile" ? "dashboard" : "profile")}
               className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all shadow-sm overflow-hidden ${viewMode === "profile" ? "border-primary bg-primary/10 scale-110" : "border-border/50 bg-card hover:border-primary/50"}`}
@@ -1392,11 +1418,18 @@ export default function OrchestrationPage() {
               userPlan={userData?.subscriptionPlan || "Free"} 
             />
           </div>
+        ) : viewMode === "playground" ? (
+          <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <RulesPlayground 
+              activeRules={currentActiveRules} 
+              selectedModel={selectedModel}
+            />
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full text-left relative overflow-hidden rounded-[2.5rem] bg-card/90 backdrop-blur-xl border-2 border-border/60 p-4 md:p-8 shadow-2xl">
             
             {/* Left Column: Input & Process Stream */}
-            <section className="lg:col-span-5 space-y-6 flex flex-col h-[700px] min-w-0">
+            <section className={`lg:col-span-5 space-y-6 flex flex-col min-w-0 ${result ? "h-auto min-h-[700px]" : "h-[700px]"}`}>
               
               {/* Mode Toggle + Input Area */}
               <div className="bg-background/40 backdrop-blur-sm p-6 rounded-[2rem] shadow-[inset_4px_4px_8px_rgba(0,0,0,0.2),inset_-4px_-4px_8px_rgba(255,255,255,0.02)] shrink-0 flex flex-col border border-border/20">
@@ -1411,7 +1444,7 @@ export default function OrchestrationPage() {
                   </button>
                   <button
                     onClick={() => setOrchestrationMode("improve")}
-                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${orchestrationMode === "improve" ? "bg-emerald-500 text-white shadow-md" : "bg-card text-muted-foreground hover:text-foreground border border-border/50"}`}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${orchestrationMode === "improve" ? "bg-green-600 text-white shadow-md" : "bg-card text-muted-foreground hover:text-foreground border border-border/50"}`}
                   >
                     <RefreshCw className="w-3 h-3" /> Improve Existing
                   </button>
@@ -1457,7 +1490,7 @@ export default function OrchestrationPage() {
                   disabled={loading || (orchestrationMode === "generate" ? !prompt.trim() : !existingRules.trim())}
                   className={`mt-4 w-full font-bold py-3.5 rounded-2xl transition-all flex items-center justify-center gap-2 shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.05)] active:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.3),inset_-2px_-2px_4px_rgba(255,255,255,0.05)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed ${
                     orchestrationMode === "improve" 
-                      ? "bg-emerald-500 text-white" 
+                      ? "bg-green-600 text-white" 
                       : "bg-primary text-primary-foreground"
                   }`}
                 >
@@ -1500,10 +1533,10 @@ export default function OrchestrationPage() {
             </section>
 
             {/* Right Column: Output & Results */}
-            <section className="lg:col-span-7 flex flex-col gap-6 h-[700px] min-w-0">
+            <section className={`lg:col-span-7 flex flex-col gap-6 min-w-0 ${result ? "h-auto min-h-[700px]" : "h-[700px]"}`}>
               
               {/* Output Code Window */}
-              <div className="flex-1 min-h-0 bg-background/40 backdrop-blur-sm rounded-[2.5rem] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.02)] flex flex-col relative group border border-border/20">
+              <div className={`bg-background/40 backdrop-blur-sm rounded-[2.5rem] p-4 shadow-[8px_8px_16px_rgba(0,0,0,0.3),-8px_-8px_16px_rgba(255,255,255,0.02)] flex flex-col relative group border border-border/20 ${result ? "h-[450px] shrink-0" : "flex-1 min-h-0"}`}>
                 <div className="bg-card px-5 py-4 flex justify-between items-center shrink-0 rounded-2xl shadow-[4px_4px_8px_rgba(0,0,0,0.2),-4px_-4px_8px_rgba(255,255,255,0.01)] mb-4 border border-transparent">
                   <div className="flex items-center gap-3">
                     <Code2 className="w-5 h-5 text-muted-foreground" />
@@ -1513,7 +1546,7 @@ export default function OrchestrationPage() {
                       <div className="inline-flex p-0.5 bg-background/50 rounded-lg ml-3">
                         <button 
                           onClick={() => setRulesView("after")} 
-                          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${rulesView === "after" ? "bg-emerald-500 text-white" : "text-muted-foreground hover:text-foreground"}`}
+                          className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${rulesView === "after" ? "bg-green-600 text-white" : "text-muted-foreground hover:text-foreground"}`}
                         >
                           IMPROVED
                         </button>
@@ -1699,7 +1732,7 @@ export default function OrchestrationPage() {
                   </div>
                 </div>
               )}
-              {loading && !streamingRules && !result && showGame && (
+              {showGame && (
                 <div className="shrink-0">
                   <DinoGame onClose={() => setShowGame(false)} />
                 </div>

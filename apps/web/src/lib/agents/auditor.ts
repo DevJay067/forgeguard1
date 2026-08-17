@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
-import { withRetry } from "./utils";
+import { withRetry, extractJson } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
 
@@ -93,12 +93,7 @@ export class AuditorAgent {
           text = response.text();
         }
         
-        let jsonStr = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-        const firstBrace = jsonStr.indexOf('{');
-        const lastBrace = jsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-        }
+        const jsonStr = extractJson(text, ['"score"', '"critique"', '"isSecure"']);
 
         try {
           const audit = JSON.parse(jsonStr) as AuditResult;

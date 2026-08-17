@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, Schema, SchemaType } from "@google/generative-ai";
 import { AppSchema } from "./reasoning";
 import { AuditResult } from "./auditor";
-import { withRetry } from "./utils";
+import { withRetry, extractJson } from "./utils";
 import { callOpenRouter } from "./openrouter";
 
 
@@ -70,12 +70,7 @@ export class AgentF {
           text = response.text();
         }
         
-        let jsonStr = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-        const firstBrace = jsonStr.indexOf('{');
-        const lastBrace = jsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-        }
+        const jsonStr = extractJson(text, ['"rules"', '"reasoning"']);
 
         try {
           const parsed = JSON.parse(jsonStr);
@@ -150,12 +145,7 @@ export class AgentF {
           text = response.text();
         }
 
-        let jsonStr = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-        const firstBrace = jsonStr.indexOf('{');
-        const lastBrace = jsonStr.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-        }
+        const jsonStr = extractJson(text, ['"rules"', '"improvements"']);
 
         try {
           const parsed = JSON.parse(jsonStr);

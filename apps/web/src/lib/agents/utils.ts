@@ -35,3 +35,40 @@ export async function withRetry<T>(
     throw error;
   }
 }
+
+/**
+ * Safely extracts the valid JSON block from raw model output,
+ * ignoring any preceding code blocks (such as rules with braces).
+ */
+export function extractJson(text: string, keys: string[]): string {
+  // Clean markdown JSON wrapper fences first
+  const codeBlockMatch = text.match(/```json\s*([\s\S]*?)\s*```/i) || text.match(/```\s*([\s\S]*?)\s*```/i);
+  const candidate = codeBlockMatch ? codeBlockMatch[1] : text;
+
+  // Search for the index of one of the expected JSON keys
+  let keyIndex = -1;
+  for (const key of keys) {
+    keyIndex = candidate.indexOf(key);
+    if (keyIndex !== -1) break;
+  }
+
+  let firstBrace = -1;
+  let lastBrace = -1;
+
+  if (keyIndex !== -1) {
+    // Opening brace of the JSON must be the last { before the key
+    firstBrace = candidate.lastIndexOf('{', keyIndex);
+    // Closing brace is the last } in the candidate string
+    lastBrace = candidate.lastIndexOf('}');
+  } else {
+    // Fallback: search for braces standard way
+    firstBrace = candidate.indexOf('{');
+    lastBrace = candidate.lastIndexOf('}');
+  }
+
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    return candidate.substring(firstBrace, lastBrace + 1);
+  }
+
+  return candidate.trim();
+}
